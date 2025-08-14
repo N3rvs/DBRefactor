@@ -3,6 +3,8 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { RenameOp, CodeFixResult, SqlScripts, TableInfo } from '@/lib/types';
+import { useDbSession, type DbSession } from '@/hooks/use-db-session';
+
 
 interface AppState {
   plan: RenameOp[];
@@ -89,13 +91,19 @@ const appReducer = (state: AppState, action: Action): AppState => {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  dbSession: DbSession & {
+    connect: (connectionString: string, ttlSeconds?: number) => Promise<any>;
+    disconnect: () => Promise<void>;
+    clearError: () => void;
+  };
 } | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const dbSession = useDbSession();
 
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ state, dispatch, dbSession }}>
       {children}
     </AppContext.Provider>
   );

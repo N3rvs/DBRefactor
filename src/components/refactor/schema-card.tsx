@@ -4,12 +4,11 @@ import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Database, ServerCrash, Table2 } from 'lucide-react';
-import { useDbSession } from '@/hooks/use-db-session';
 
 
 export function SchemaCard() {
-  const { state } = useAppContext();
-  const { sessionId } = useDbSession();
+  const { state, dbSession } = useAppContext();
+  const { sessionId } = dbSession;
   const { schema } = state;
 
   return (

@@ -37,15 +37,14 @@ import {
 import type { RenameOp } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
-import { useDbSession } from '@/hooks/use-db-session';
 import { useToast } from '@/hooks/use-toast';
 import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 export function PlanBuilder() {
-  const { state, dispatch } = useAppContext();
-  const { sessionId } = useDbSession();
+  const { state, dispatch, dbSession } = useAppContext();
+  const { sessionId } = dbSession;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<RenameOp | null>(null);

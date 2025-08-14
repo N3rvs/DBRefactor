@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, Database, Loader2, XCircle } from 'lucide-react';
-import { useDbSession } from '@/hooks/use-db-session';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/app-context';
@@ -22,8 +21,8 @@ import * as api from '@/lib/api';
 export function ConnectionCard() {
   const [connectionString, setConnectionString] = useState('');
   const { toast } = useToast();
-  const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = useDbSession();
-  const { dispatch } = useAppContext();
+  const { dbSession, dispatch } = useAppContext();
+  const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = dbSession;
 
   const handleConnect = async () => {
     const trimmedConnectionString = connectionString.trim();
