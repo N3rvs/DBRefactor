@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { RenameOp, CodeFixResult, SqlScripts, TableInfo } from '@/lib/types';
+import type { RenameOp, CodeFixResult, SqlScripts, TableInfo, GenerateOptions } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
 
 
@@ -20,11 +20,8 @@ interface AppState {
     isLoading: boolean;
     error: string | null;
   };
-  options: {
+  options: GenerateOptions & {
     rootKey: string;
-    useSynonyms: boolean;
-    useViews: boolean;
-    cqrs: boolean;
   };
 }
 
@@ -46,7 +43,8 @@ const initialState: AppState = {
     rootKey: 'SOLUTION',
     useSynonyms: true,
     useViews: true,
-    cqrs: true,
+    cqrs: false,
+    allowDestructive: false,
   }
 };
 
@@ -62,7 +60,7 @@ type Action =
   | { type: 'SET_SCHEMA_LOADING'; payload: boolean }
   | { type: 'SET_SCHEMA_SUCCESS'; payload: TableInfo[] }
   | { type: 'SET_SCHEMA_ERROR'; payload: string | null }
-  | { type: 'SET_REFACTOR_OPTION', payload: { key: keyof AppState['options'], value: any } };
+  | { type: 'SET_OPTION', payload: { key: keyof AppState['options'], value: any } };
 
 const appReducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
@@ -83,11 +81,11 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'SET_PLAN':
       return { ...state, plan: action.payload };
     case 'SET_RESULTS_LOADING':
-      return { ...state, results: { ...state.results, isLoading: action.payload, error: null } };
+      return { ...state, results: { ...initialState.results, isLoading: action.payload } };
     case 'SET_RESULTS_SUCCESS':
       return { ...state, results: { ...action.payload, isLoading: false, error: null } };
     case 'SET_RESULTS_ERROR':
-      return { ...state, results: { ...state.results, isLoading: false, error: action.payload } };
+      return { ...state, results: { ...initialState.results, isLoading: false, error: action.payload } };
     case 'CLEAR_RESULTS':
       return {...state, results: initialState.results };
     case 'SET_SCHEMA_LOADING':
@@ -96,7 +94,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return { ...state, schema: { ...state.schema, tables: action.payload, isLoading: false, error: null } };
     case 'SET_SCHEMA_ERROR':
       return { ...state, schema: { ...state.schema, tables: null, isLoading: false, error: action.payload } };
-    case 'SET_REFACTOR_OPTION':
+    case 'SET_OPTION':
         return {
             ...state,
             options: {
@@ -112,11 +110,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<Action>;
-  dbSession: DbSession & {
-    connect: (connectionString: string, ttlSeconds?: number) => Promise<any>;
-    disconnect: () => Promise<void>;
-    clearError: () => void;
-  };
+  dbSession: DbSession;
 } | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -133,7 +127,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (context === undefined) {
-    throw new Error('useAppContext must be used within an AppProvider');
+    throw new Error('useAppContext debe ser usado dentro de un AppProvider');
   }
   return context;
 };

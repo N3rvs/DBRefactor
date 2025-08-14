@@ -22,7 +22,6 @@ import { useForm, Controller } from 'react-hook-form';
 import type { RenameOp } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { useEffect, useState } from 'react';
-import { Checkbox } from '../ui/checkbox';
 
 interface AddOpDialogProps {
   isOpen: boolean;
@@ -32,30 +31,14 @@ interface AddOpDialogProps {
 
 type FormData = Omit<RenameOp, 'id'>;
 
-const commonSqlTypes = [
-  'varchar(255)', 'int', 'bigint', 'decimal(18, 2)', 'bit', 
-  'datetime', 'date', 'text', 'nvarchar(max)', 'uniqueidentifier'
-];
-
-
 export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) {
-  const { state, dispatch } = useAppContext();
-  const { schema } = state;
-  const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>();
+  const { dispatch } = useAppContext();
+  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>();
   const scope = watch('scope');
-  const isForeignKey = watch('foreignKey.isForeignKey');
-  const referencedTable = watch('foreignKey.referencesTable');
-  
-  const [customType, setCustomType] = useState('');
-  const columnType = watch('type');
 
   useEffect(() => {
     if (operation) {
       reset(operation);
-       if (operation.type && !commonSqlTypes.includes(operation.type)) {
-        setValue('type', 'custom');
-        setCustomType(operation.type);
-      }
     } else {
       reset({
         scope: 'table',
@@ -65,41 +48,19 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         columnTo: '',
         type: '',
         note: '',
-        foreignKey: {
-          isForeignKey: false,
-          referencesTable: '',
-          referencesColumn: ''
-        }
       });
-      setCustomType('');
     }
-  }, [operation, reset, isOpen, setValue]);
+  }, [operation, reset, isOpen]);
   
-  useEffect(() => {
-    if (columnType === 'custom') {
-      setValue('type', customType);
-    }
-  }, [customType, columnType, setValue])
-
 
   const onSubmit = (data: FormData) => {
-    let finalData = { ...data };
-    if (data.type === 'custom') {
-      finalData.type = customType;
-    }
-     if (!finalData.foreignKey?.isForeignKey) {
-      finalData.foreignKey = undefined;
-    }
-
     if (operation) {
-      dispatch({ type: 'UPDATE_OPERATION', payload: { ...finalData, id: operation.id } });
+      dispatch({ type: 'UPDATE_OPERATION', payload: { ...data, id: operation.id } });
     } else {
-      dispatch({ type: 'ADD_OPERATION', payload: { ...finalData, id: Date.now().toString() } });
+      dispatch({ type: 'ADD_OPERATION', payload: { ...data, id: Date.now().toString() } });
     }
     setIsOpen(false);
   };
-  
-  const referencedColumns = schema.tables?.find(t => t.name === referencedTable)?.columns || [];
 
   const renderFields = () => {
     switch (scope) {
@@ -157,95 +118,9 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
             </div>
             <div className="space-y-2">
               <Label htmlFor="type">Tipo de Columna</Label>
-              <Controller
-                name="type"
-                control={control}
-                rules={{ required: "Este campo es requerido" }}
-                render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccione un tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {commonSqlTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                      <SelectItem value="custom">Personalizado...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {columnType === 'custom' && (
-                <Input 
-                  className="mt-2"
-                  placeholder="Escriba el tipo personalizado"
-                  value={customType}
-                  onChange={e => setCustomType(e.target.value)}
-                  required
-                />
-              )}
-              {errors.type && <p className="text-destructive text-sm">{errors.type.message}</p>}
+              <Input id="type" {...register('type', { required: true })} placeholder="ej., nvarchar(max)" />
+               {errors.type && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <Controller
-                    name="foreignKey.isForeignKey"
-                    control={control}
-                    render={({ field }) => (
-                      <Checkbox id="isForeignKey" checked={field.value} onCheckedChange={field.onChange} />
-                    )}
-                />
-                <Label htmlFor="isForeignKey">Es Clave Foránea</Label>
-              </div>
-            </div>
-
-            {isForeignKey && (
-              <>
-                <div className="space-y-2 pl-6 border-l-2 ml-2">
-                  <Label htmlFor="referencesTable">Tabla Referenciada</Label>
-                   <Controller
-                    name="foreignKey.referencesTable"
-                    control={control}
-                    rules={{ required: isForeignKey ? 'Este campo es requerido' : false }}
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccione una tabla" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {schema.tables?.map(table => (
-                            <SelectItem key={table.name} value={table.name}>{table.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.foreignKey?.referencesTable && <p className="text-destructive text-sm">{errors.foreignKey.referencesTable.message}</p>}
-
-                  {referencedTable && (
-                     <div className="space-y-2 pt-2">
-                        <Label htmlFor="referencesColumn">Columna Referenciada</Label>
-                        <Controller
-                            name="foreignKey.referencesColumn"
-                            control={control}
-                            rules={{ required: isForeignKey ? 'Este campo es requerido' : false }}
-                            render={({ field }) => (
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <SelectTrigger>
-                                <SelectValue placeholder="Seleccione una columna" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                {referencedColumns.map(col => (
-                                    <SelectItem key={col.name} value={col.name}>{col.name}</SelectItem>
-                                ))}
-                                </SelectContent>
-                            </Select>
-                            )}
-                        />
-                        {errors.foreignKey?.referencesColumn && <p className="text-destructive text-sm">{errors.foreignKey.referencesColumn.message}</p>}
-                     </div>
-                  )}
-                </div>
-              </>
-            )}
           </>
         );
       default:
@@ -271,7 +146,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
                 control={control}
                 defaultValue="table"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un ámbito" />
                     </SelectTrigger>

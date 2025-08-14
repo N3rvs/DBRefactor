@@ -68,7 +68,7 @@ export function PlanBuilder() {
     dispatch({ type: 'REMOVE_OPERATION', payload: id });
   };
   
-  const handleAction = async (apply: boolean, cleanup: boolean = false) => {
+  const handleAction = async (actionType: 'preview' | 'apply' | 'cleanup') => {
     if (!sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
@@ -81,11 +81,17 @@ export function PlanBuilder() {
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     try {
       const plainRenames = state.plan.map(({ id, ...rest }) => rest);
-      let response;
-      const { rootKey, useSynonyms, useViews, cqrs } = state.options;
+      const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
-      if (cleanup) {
-        response = await api.runCleanup({ sessionId, renames: plainRenames });
+      if (actionType === 'cleanup') {
+        const response = await api.runCleanup({
+          sessionId,
+          renames: plainRenames,
+          useSynonyms,
+          useViews,
+          cqrs,
+          allowDestructive,
+        });
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -95,16 +101,17 @@ export function PlanBuilder() {
           },
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
-
       } else {
-         response = await api.runRefactor({
+        const isApply = actionType === 'apply';
+        const response = await api.runRefactor({
           sessionId,
           plan: { renames: plainRenames },
-          apply,
+          apply: isApply,
           rootKey,
           useSynonyms,
           useViews,
-          cqrs
+          cqrs,
+          allowDestructive
         });
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
@@ -114,7 +121,7 @@ export function PlanBuilder() {
             dbLog: response.dbLog || null,
           },
         });
-        toast({ title: apply ? 'Plan Aplicado' : 'Previsualización Generada', description: apply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
+        toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       }
 
     } catch (err) {
@@ -135,16 +142,26 @@ export function PlanBuilder() {
     }
     setIsAiLoading(true);
     try {
-      const schema = await api.analyzeSchemaBySession({ sessionId });
+      if (!state.schema.tables) {
+         toast({ variant: 'destructive', title: 'Esquema no cargado', description: 'No se puede sugerir un orden sin el esquema de la base de datos.' });
+         return;
+      }
+      
       const plainRenames = state.plan.map(({ id, ...rest }) => rest);
       
       const aiResult = await getAiRefactoringSuggestion({
-        tables: schema.tables,
+        tables: state.schema.tables,
         renames: plainRenames,
       });
 
       const newOrderedPlan = aiResult.orderedRenames.map((op, index) => {
-        const originalOp = state.plan.find(p => p.tableFrom === op.tableFrom && p.columnFrom === op.columnFrom && p.tableTo === op.tableTo && p.columnTo === op.columnTo);
+        const originalOp = state.plan.find(p => 
+          p.scope === op.scope &&
+          p.tableFrom === op.tableFrom && 
+          p.columnFrom === op.columnFrom && 
+          p.tableTo === op.tableTo && 
+          p.columnTo === op.columnTo
+        );
         return {
           ...op,
           id: originalOp?.id || `${Date.now()}-${index}`,
@@ -165,7 +182,7 @@ export function PlanBuilder() {
     switch (scope) {
       case 'table': return <Badge variant="secondary">Renombrar Tabla</Badge>;
       case 'column': return <Badge variant="secondary">Renombrar Columna</Badge>;
-      case 'add-column': return <Badge variant="secondary" className="bg-blue-500/20 text-blue-300">Añadir Columna</Badge>;
+      case 'add-column': return <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30">Añadir Columna</Badge>;
       case 'drop-column': return <Badge variant="destructive">Eliminar Columna</Badge>;
       case 'drop-table': return <Badge variant="destructive">Eliminar Tabla</Badge>;
       case 'drop-index': return <Badge variant="destructive">Eliminar Índice</Badge>;
@@ -184,7 +201,7 @@ export function PlanBuilder() {
       case 'add-column':
         return op.tableFrom;
       case 'drop-index':
-        return op.columnFrom; // Using columnFrom for index name
+        return op.columnFrom; // Usando columnFrom para el nombre del índice
       default:
         return '-';
     }
@@ -300,16 +317,19 @@ export function PlanBuilder() {
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
                 Sugerir Orden (IA)
             </Button>
-             <Button variant="outline" onClick={() => handleAction(false)} disabled={state.results.isLoading}>
-                {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
+             <Button variant="outline" onClick={() => handleAction('preview')} disabled={state.results.isLoading || state.plan.length === 0}>
+                {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                <Play className="mr-2 h-4 w-4"/>
                 Previsualizar Plan
             </Button>
-            <Button onClick={() => handleAction(true)} disabled={state.results.isLoading}>
-                 {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ClipboardCheck className="mr-2 h-4 w-4"/>}
+            <Button onClick={() => handleAction('apply')} disabled={state.results.isLoading || state.plan.length === 0}>
+                 {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                 <ClipboardCheck className="mr-2 h-4 w-4"/>
                 Aplicar Plan
             </Button>
-            <Button variant="destructive" onClick={() => handleAction(false, true)} disabled={state.results.isLoading}>
-                 {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+            <Button variant="destructive" onClick={() => handleAction('cleanup')} disabled={state.results.isLoading || state.plan.length === 0}>
+                 {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                 <Sparkles className="mr-2 h-4 w-4"/>
                 Limpiar
             </Button>
         </CardFooter>

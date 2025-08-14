@@ -14,12 +14,11 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { TableInfo, ColumnInfo, FKInfo, IndexInfo, RenameOp } from '@/lib/types';
+import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
 import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
-import { cn } from '@/lib/utils';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
@@ -33,7 +32,7 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
   actions
 }: {
   data: T[] | undefined;
-  columns: { key: keyof T, header: string }[];
+  columns: { key: string, header: string }[];
   caption: string;
   actions?: (item: T) => React.ReactNode;
 }) => {
@@ -46,14 +45,14 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
       <Table>
         <TableHeader>
           <TableRow>
-            {columns.map(col => <TableHead key={String(col.key)}>{col.header}</TableHead>)}
+            {columns.map(col => <TableHead key={col.key}>{col.header}</TableHead>)}
             {actions && <TableHead className="w-[50px]"></TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.map((item) => (
             <TableRow key={item.name}>
-                 {columns.map(col => <TableCell key={String(col.key)} className="font-mono text-xs">{item[col.key]}</TableCell>)}
+                 {columns.map(col => <TableCell key={col.key} className="font-mono text-xs">{item[col.key]}</TableCell>)}
                  {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
             </TableRow>
           ))}
@@ -91,7 +90,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
   
   const handleDropIndex = (table: TableInfo, index: IndexInfo) => {
-    // We use columnFrom to store the index name for simplicity
+    // Usamos columnFrom para guardar el nombre del índice
     handleAddSimpleOperation({ scope: 'drop-index', tableFrom: table.name, columnFrom: index.name });
   };
 
@@ -100,43 +99,41 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={table.name} key={table.name}>
-          <AccordionTrigger
-            className="flex w-full items-center justify-between font-medium transition-all hover:underline [&[data-state=open]>div>div>svg.chevron]:rotate-180"
-          >
-             <div className="flex items-center gap-4">
-                 <span className="font-semibold text-base">{table.name}</span>
-                 <Badge variant="outline">{table.schema}</Badge>
-             </div>
-             <div className="flex items-center gap-2 no-underline">
-                 <DropdownMenu>
-                     <DropdownMenuTrigger asChild>
-                         <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-8 w-8"
-                             onClick={(e) => e.stopPropagation()}
-                             >
-                             <MoreHorizontal className="h-4 w-4" />
-                         </Button>
-                     </DropdownMenuTrigger>
-                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                     <DropdownMenuItem onClick={() => handleRenameTable(table)}>
-                         <Pencil className="mr-2 h-4 w-4" />
-                         Renombrar Tabla
-                     </DropdownMenuItem>
-                     <DropdownMenuItem onClick={() => handleAddColumn(table)}>
-                         <Plus className="mr-2 h-4 w-4" />
-                         Añadir Columna
-                     </DropdownMenuItem>
-                     <DropdownMenuSeparator />
-                     <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                         <Trash2 className="mr-2 h-4 w-4" />
-                         Eliminar Tabla
-                     </DropdownMenuItem>
-                     </DropdownMenuContent>
-                 </DropdownMenu>
-                 <ChevronDown className="chevron h-4 w-4 shrink-0 transition-transform duration-200" />
-             </div>
+          <AccordionTrigger>
+            <div className="flex items-center gap-4">
+                <span className="font-semibold text-base">{table.name}</span>
+                <Badge variant="outline">{table.schema}</Badge>
+            </div>
+            <div className="flex items-center gap-2 no-underline">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => e.stopPropagation()}
+                            >
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                    <DropdownMenuItem onClick={() => handleRenameTable(table)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Renombrar Tabla
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddColumn(table)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Añadir Columna
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Tabla
+                    </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+            </div>
           </AccordionTrigger>
           <AccordionContent className="bg-muted/30 p-4 rounded-md">
             <div className="grid grid-cols-3 gap-4 text-sm mb-4">
@@ -169,14 +166,19 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                   </DropdownMenu>
                 )}
             />
-            <DetailTable<FKInfo> 
+            <DetailTable<ForeignKeyInfo> 
                 data={table.foreignKeys}
-                columns={[{key: 'name', header: 'Nombre'}]}
+                columns={[
+                  {key: 'name', header: 'Nombre'}, 
+                  {key: 'fromColumn', header: 'Columna Origen'},
+                  {key: 'toTable', header: 'Tabla Destino'},
+                  {key: 'toColumn', header: 'Columna Destino'},
+                ]}
                 caption="Claves Foráneas"
             />
              <DetailTable<IndexInfo> 
                 data={table.indexes}
-                columns={[{key: 'name', header: 'Nombre'}]}
+                columns={[{key: 'name', header: 'Nombre'}, {key: 'isUnique', header: 'Único'}, {key: 'columns', header: 'Columnas'}]}
                 caption="Índices"
                 actions={(index) => (
                    <DropdownMenu>

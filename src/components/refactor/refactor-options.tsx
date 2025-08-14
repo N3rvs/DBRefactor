@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Settings2, HelpCircle } from 'lucide-react';
+import { Settings2, HelpCircle, AlertTriangle } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import {
   Tooltip,
@@ -34,10 +34,10 @@ const InfoTooltip = ({ content }: { content: string }) => (
 
 export function RefactorOptions() {
   const { state, dispatch } = useAppContext();
-  const { useSynonyms, useViews, cqrs } = state.options;
+  const { useSynonyms, useViews, allowDestructive } = state.options;
 
-  const handleOptionChange = (option: 'useSynonyms' | 'useViews' | 'cqrs', value: boolean) => {
-    dispatch({ type: 'SET_REFACTOR_OPTION', payload: { key: option, value } });
+  const handleOptionChange = (option: 'useSynonyms' | 'useViews' | 'allowDestructive', value: boolean) => {
+    dispatch({ type: 'SET_OPTION', payload: { key: option, value } });
   };
 
   return (
@@ -53,9 +53,10 @@ export function RefactorOptions() {
       </CardHeader>
       <TooltipProvider>
         <CardContent className="space-y-4">
+          <p className="text-sm font-semibold text-muted-foreground">Compatibilidad</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Label htmlFor="useSynonyms" className="font-semibold">
+              <Label htmlFor="useSynonyms">
                 Usar Sinónimos
               </Label>
               <InfoTooltip content="Crea sinónimos para las tablas/columnas renombradas para compatibilidad con versiones anteriores. Esto permite que el código antiguo funcione sin actualizaciones inmediatas." />
@@ -66,10 +67,9 @@ export function RefactorOptions() {
               onCheckedChange={(value) => handleOptionChange('useSynonyms', value)}
             />
           </div>
-          <Separator />
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Label htmlFor="useViews" className="font-semibold">
+              <Label htmlFor="useViews">
                 Usar Vistas
               </Label>
               <InfoTooltip content="Genera vistas que imitan la estructura original de la tabla, asegurando que las consultas de lectura de los sistemas heredados continúen funcionando sin problemas." />
@@ -81,17 +81,19 @@ export function RefactorOptions() {
             />
           </div>
           <Separator />
-          <div className="flex items-center justify-between">
+           <p className="text-sm font-semibold text-muted-foreground">Operaciones Destructivas</p>
+           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Label htmlFor="useCqrs" className="font-semibold">
-                Usar Vistas CQRS
+              <Label htmlFor="allowDestructive" className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-4 w-4" />
+                Permitir Eliminaciones
               </Label>
-              <InfoTooltip content="Implementa la Segregación de Responsabilidad de Consulta y Comando (CQRS) creando vistas separadas para operaciones de lectura, aislándolas de las operaciones de escritura." />
+              <InfoTooltip content="Habilita la ejecución de operaciones DROP (eliminar tablas, columnas, etc.) durante la fase de limpieza. Esta acción es irreversible." />
             </div>
             <Switch
-              id="useCqrs"
-              checked={cqrs}
-              onCheckedChange={(value) => handleOptionChange('cqrs', value)}
+              id="allowDestructive"
+              checked={allowDestructive}
+              onCheckedChange={(value) => handleOptionChange('allowDestructive', value)}
             />
           </div>
         </CardContent>

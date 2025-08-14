@@ -28,14 +28,12 @@ const AccordionTrigger = React.forwardRef<
     <AccordionPrimitive.Trigger
       ref={ref}
       className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>div>svg.chevron]:rotate-180",
         className
       )}
       {...props}
     >
       {children}
-      {/* Fallback Icon - Renders only if no children are passed or if children are not a valid React element, which is not the case in our SchemaViewer. */}
-      {!React.isValidElement(children) && <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />}
     </AccordionPrimitive.Trigger>
   </AccordionPrimitive.Header>
 ))

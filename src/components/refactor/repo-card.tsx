@@ -17,7 +17,7 @@ export function RepoCard() {
   const { rootKey } = state.options;
 
   const handleRootKeyChange = (value: string) => {
-    dispatch({ type: 'SET_REFACTOR_OPTION', payload: { key: 'rootKey', value } });
+    dispatch({ type: 'SET_OPTION', payload: { key: 'rootKey', value } });
   };
 
   return (
@@ -33,7 +33,7 @@ export function RepoCard() {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-            <Label htmlFor="rootKey">Clave Raíz</Label>
+            <Label htmlFor="rootKey">Clave Raíz del Repositorio</Label>
             <Input 
                 id="rootKey"
                 placeholder="ej., SOLUTION o FRONT"

@@ -10,8 +10,6 @@ import type {
   ConnectRequest,
   ConnectResponse,
   DisconnectRequest,
-  GeneratePlanRequest,
-  GeneratePlanResponse,
   RefactorRequest,
   RefactorResponse,
 } from './types';
@@ -21,7 +19,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_DBREFACTOR_API || 'http://localhost
 async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeoutMs: number = 30000
+  timeoutMs: number = 60000 // Aumentado a 60s para operaciones largas
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -33,7 +31,7 @@ async function fetchApi<T>(
         'Content-Type': 'application/json',
         ...options.headers,
       },
-      cache: 'no-store', // Always fetch fresh data
+      cache: 'no-store', // Siempre obtener datos frescos
       signal: controller.signal,
     });
 
@@ -44,9 +42,9 @@ async function fetchApi<T>(
       try {
         errorData = await response.json();
       } catch (e) {
-        errorData = { message: `HTTP error! status: ${response.status}`, error: response.statusText };
+        errorData = { message: `Error HTTP: ${response.status}`, error: response.statusText };
       }
-      throw new Error(errorData.message || 'An unknown API error occurred.');
+      throw new Error(errorData.message || 'Ocurrió un error desconocido en la API.');
     }
 
     if (response.status === 204 || response.headers.get('Content-Length') === '0') {
@@ -57,7 +55,7 @@ async function fetchApi<T>(
   } catch (error) {
     clearTimeout(timeout);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Request timed out after ${timeoutMs / 1000} seconds.`);
+      throw new Error(`La solicitud excedió el tiempo de espera de ${timeoutMs / 1000} segundos.`);
     }
     throw error;
   }
@@ -79,13 +77,6 @@ export const disconnectSession = (body: DisconnectRequest) => {
 
 export const analyzeSchemaBySession = (body: AnalyzeSchemaRequest) => {
   return fetchApi<AnalyzeSchemaResponse>('/analyze/schema', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-};
-
-export const generatePlan = (body: GeneratePlanRequest) => {
-  return fetchApi<GeneratePlanResponse>('/plan', {
     method: 'POST',
     body: JSON.stringify(body),
   });

@@ -1,34 +1,40 @@
-// Using `never` to enforce that only one of the connection properties can be present.
+// Conexiones: exactamente una
 export type WithSessionId        = { sessionId: string;    connectionKey?: never; connectionString?: never };
 export type WithConnectionKey    = { connectionKey: string; sessionId?: never;   connectionString?: never };
 export type WithConnectionString = { connectionString: string; sessionId?: never; connectionKey?: never };
 export type ConnectionProps = WithSessionId | WithConnectionKey | WithConnectionString;
 
-// Operation and Plan types
-// Added a client-side `id` for easier state management in React.
+// Tipos base
+// El `id` es solo para el cliente
 export type RenameOp = {
-  id: string; 
-  scope: "table" | "column" | "add-column" | "drop-table" | "drop-column" | "drop-index" | string;
+  id: string;
+  scope: "table" | "column" | "add-column" | "drop-column" | "drop-table" | "drop-index";
   area?: "write" | "read" | "both";
   tableFrom: string;
   tableTo?: string | null;
   columnFrom?: string | null;
   columnTo?: string | null;
-  type?: string | null; // Required for 'add-column' and type-changing 'rename-column'
+  type?: string | null;      // requerido en add-column y en "column" con cambio de tipo
   note?: string | null;
-  foreignKey?: {
-    isForeignKey: boolean;
-    referencesTable: string;
-    referencesColumn: string;
-  } | null;
 };
 
-// The plan sent to the API should not include the client-side `id`.
-export type RefactorPlan = {
-  renames: Omit<RenameOp, 'id'>[];
+export type GenerateOptions = {
+  useSynonyms?: boolean;     // compat para rename table
+  useViews?: boolean;        // compat para rename column
+  cqrs?: boolean;            // reservado
+  allowDestructive?: boolean;// habilita drop-*
 };
 
-// API Request Body Types
+export type RefactorPlan = { renames: Omit<RenameOp, 'id'>[] };
+
+// Resumen de schema
+export type ColumnInfo = { name: string; type: string; isNullable?: boolean };
+export type ForeignKeyInfo = { name: string; fromTable?: string; fromColumn?: string; toTable?: string; toColumn?: string };
+export type IndexInfo = { name: string; isUnique?: boolean; columns?: string[] };
+export type TableInfo = { schema: string; name: string; columns: ColumnInfo[]; foreignKeys: ForeignKeyInfo[]; indexes: IndexInfo[] };
+
+
+// Payloads de Request
 export type ConnectRequest = {
   connectionString: string;
   ttlSeconds?: number;
@@ -40,27 +46,14 @@ export type DisconnectRequest = {
 
 export type AnalyzeSchemaRequest = ConnectionProps;
 
-export type GeneratePlanRequest = {
-  renames: Omit<RenameOp, 'id'>[];
-  useSynonyms?: boolean;
-  useViews?: boolean;
-  cqrs?: boolean;
-} & ConnectionProps;
-
-export type RefactorRequest = ConnectionProps & {
+export type RefactorRequest = ConnectionProps & GenerateOptions & {
   plan: RefactorPlan;
   apply: boolean;
-  rootKey?: "SOLUTION" | "FRONT" | (string & {});
-  useSynonyms?: boolean;
-  useViews?: boolean;
-  cqrs?: boolean;
+  rootKey?: string;
 };
 
-export type CleanupRequest = ConnectionProps & {
+export type CleanupRequest = ConnectionProps & GenerateOptions & {
   renames: Omit<RenameOp, 'id'>[];
-  useSynonyms?: boolean;
-  useViews?: boolean;
-  cqrs?: boolean;
 };
 
 export type CodeFixRequest = {
@@ -71,33 +64,10 @@ export type CodeFixRequest = {
   excludeGlobs?: string[];
 };
 
-// API Response Types
+// Payloads de Response
 export type ConnectResponse = {
   sessionId: string;
   expiresAtUtc: string;
-};
-
-export type ColumnInfo = {
-  name: string;
-  type: string;
-};
-
-export type FKInfo = {
-  name: string;
-  // Other properties can be added here as needed.
-};
-
-export type IndexInfo = {
-  name: string;
-  // Other properties can be added here as needed.
-};
-
-export type TableInfo = {
-  schema: string;
-  name: string;
-  columns: ColumnInfo[];
-  foreignKeys: FKInfo[];
-  indexes: IndexInfo[];
 };
 
 export type AnalyzeSchemaResponse = {
@@ -108,11 +78,6 @@ export type SqlScripts = {
   renameSql?: string;
   compatSql?: string;
   cleanupSql?: string;
-};
-
-export type GeneratePlanResponse = {
-  sql: SqlScripts;
-  report?: any;
 };
 
 export type CodeFixResult = {
