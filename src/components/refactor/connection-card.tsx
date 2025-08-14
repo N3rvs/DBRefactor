@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,11 +15,15 @@ import { CheckCircle, Database, Loader2, XCircle } from 'lucide-react';
 import { useDbSession } from '@/hooks/use-db-session';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAppContext } from '@/contexts/app-context';
+import * as api from '@/lib/api';
+
 
 export function ConnectionCard() {
   const [connectionString, setConnectionString] = useState('');
   const { toast } = useToast();
   const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = useDbSession();
+  const { dispatch } = useAppContext();
 
   const handleConnect = async () => {
     if (!connectionString) {
@@ -31,12 +35,26 @@ export function ConnectionCard() {
       return;
     }
     try {
-      await connect(connectionString);
+      const connection = await connect(connectionString);
       toast({
         title: 'Éxito',
         description: 'Conectado a la base de datos con éxito.',
       });
       setConnectionString('');
+
+      if(connection.sessionId) {
+        // Automatically analyze schema on successful connection
+        dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+        try {
+          const response = await api.analyzeSchemaBySession({ sessionId: connection.sessionId });
+          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: response.tables });
+        } catch (err) {
+          const errorMsg = err instanceof Error ? err.message : 'Error al analizar el esquema.';
+          dispatch({ type: 'SET_SCHEMA_ERROR', payload: errorMsg });
+          toast({ variant: 'destructive', title: 'Análisis Automático Fallido', description: errorMsg });
+        }
+      }
+
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -53,6 +71,7 @@ export function ConnectionCard() {
         title: 'Éxito',
         description: 'Desconectado de la base de datos.',
       });
+      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] }); // Clear schema on disconnect
     } catch (err) {
       toast({
         variant: 'destructive',

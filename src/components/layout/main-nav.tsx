@@ -9,7 +9,8 @@ export function MainNav() {
 
   const navItems = [
     { href: '/refactor', label: 'Refactorizar' },
-    { href: '/schema', label: 'Esquema' },
+    // The Schema page has been merged into the Refactor page.
+    // { href: '/schema', label: 'Esquema' },
   ];
 
   return (

@@ -4,6 +4,7 @@ import { PlanBuilder } from '@/components/refactor/plan-builder';
 import { RefactorOptions } from '@/components/refactor/refactor-options';
 import { RepoCard } from '@/components/refactor/repo-card';
 import { ResultPanel } from '@/components/refactor/result-panel';
+import { SchemaCard } from '@/components/refactor/schema-card';
 
 export default function RefactorPage() {
   return (
@@ -15,6 +16,7 @@ export default function RefactorPage() {
           <RefactorOptions />
         </aside>
         <main className="lg:col-span-2 flex flex-col gap-8">
+          <SchemaCard />
           <PlanBuilder />
           <ResultPanel />
         </main>
