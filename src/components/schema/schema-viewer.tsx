@@ -16,8 +16,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, FKInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Pencil, Plus } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { useAppContext } from '@/contexts/app-context';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
@@ -62,9 +63,18 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
 };
 
 export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
+  const { dispatch } = useAppContext();
+
+  const handleAddSimpleOperation = (op: Omit<RenameOp, 'id' | 'note'>) => {
+    dispatch({ type: 'ADD_OPERATION', payload: { ...op, id: Date.now().toString() } });
+  }
   
   const handleRenameTable = (table: TableInfo) => {
     onAddOperation({ scope: 'table', tableFrom: table.name, tableTo: '' });
+  };
+
+  const handleDropTable = (table: TableInfo) => {
+    handleAddSimpleOperation({ scope: 'drop-table', tableFrom: table.name });
   };
   
   const handleAddColumn = (table: TableInfo) => {
@@ -73,6 +83,15 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
 
   const handleRenameColumn = (table: TableInfo, column: ColumnInfo) => {
     onAddOperation({ scope: 'column', tableFrom: table.name, columnFrom: column.name, columnTo: '' });
+  };
+
+  const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
+    handleAddSimpleOperation({ scope: 'drop-column', tableFrom: table.name, columnFrom: column.name });
+  };
+  
+  const handleDropIndex = (table: TableInfo, index: IndexInfo) => {
+    // We use columnFrom to store the index name for simplicity
+    handleAddSimpleOperation({ scope: 'drop-index', tableFrom: table.name, columnFrom: index.name });
   };
 
 
@@ -102,6 +121,11 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                       <Plus className="mr-2 h-4 w-4" />
                       Añadir Columna
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar Tabla
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -130,6 +154,10 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                         <Pencil className="mr-2 h-4 w-4" />
                         Renombrar Columna
                       </DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => handleDropColumn(table, column)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Columna
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -143,6 +171,21 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 data={table.indexes}
                 columns={[{key: 'name', header: 'Nombre'}]}
                 caption="Índices"
+                actions={(index) => (
+                   <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleDropIndex(table, index)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Índice
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
             />
           </AccordionContent>
         </AccordionItem>

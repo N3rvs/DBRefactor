@@ -25,7 +25,10 @@ import {
   Trash2,
   ListOrdered,
   Loader2,
-  Bot
+  Bot,
+  Play,
+  ClipboardCheck,
+  Sparkles,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -63,6 +66,61 @@ export function PlanBuilder() {
 
   const handleRemove = (id: string) => {
     dispatch({ type: 'REMOVE_OPERATION', payload: id });
+  };
+  
+  const handleAction = async (apply: boolean, cleanup: boolean = false) => {
+    if (!sessionId) {
+      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
+      return;
+    }
+    if (state.plan.length === 0) {
+      toast({ title: 'Plan Vacío', description: 'Agregue al menos una operación al plan.' });
+      return;
+    }
+
+    dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
+    try {
+      const plainRenames = state.plan.map(({ id, ...rest }) => rest);
+      let response;
+
+      if (cleanup) {
+        response = await api.runCleanup({ sessionId, renames: plainRenames });
+        dispatch({
+          type: 'SET_RESULTS_SUCCESS',
+          payload: {
+            sql: response.sql,
+            codefix: null,
+            dbLog: response.log,
+          },
+        });
+        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
+
+      } else {
+         response = await api.runRefactor({
+          sessionId,
+          plan: { renames: plainRenames },
+          apply,
+          rootKey: 'SOLUTION',
+          useSynonyms: true,
+          useViews: true,
+          cqrs: true
+        });
+        dispatch({
+          type: 'SET_RESULTS_SUCCESS',
+          payload: {
+            sql: response.sql,
+            codefix: response.codefix,
+            dbLog: response.dbLog || null,
+          },
+        });
+        toast({ title: apply ? 'Plan Aplicado' : 'Previsualización Generada', description: apply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
+      }
+
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
+      toast({ variant: 'destructive', title: 'Operación Fallida', description: errorMsg });
+    }
   };
 
   const handleSuggestOrder = async () => {
@@ -102,6 +160,52 @@ export function PlanBuilder() {
     }
   };
 
+  const getScopeBadge = (scope: string) => {
+    switch (scope) {
+      case 'table': return <Badge variant="secondary">Renombrar Tabla</Badge>;
+      case 'column': return <Badge variant="secondary">Renombrar Columna</Badge>;
+      case 'add-column': return <Badge variant="secondary" className="bg-blue-500/20 text-blue-300">Añadir Columna</Badge>;
+      case 'drop-column': return <Badge variant="destructive">Eliminar Columna</Badge>;
+      case 'drop-table': return <Badge variant="destructive">Eliminar Tabla</Badge>;
+      case 'drop-index': return <Badge variant="destructive">Eliminar Índice</Badge>;
+      default: return <Badge variant="secondary">{scope}</Badge>;
+    }
+  }
+
+  const renderFrom = (op: RenameOp) => {
+    switch (op.scope) {
+      case 'table':
+      case 'drop-table':
+        return op.tableFrom;
+      case 'column':
+      case 'drop-column':
+        return `${op.tableFrom}.${op.columnFrom}`;
+      case 'add-column':
+        return op.tableFrom;
+      case 'drop-index':
+        return op.columnFrom; // Using columnFrom for index name
+      default:
+        return '-';
+    }
+  }
+
+  const renderTo = (op: RenameOp) => {
+     switch (op.scope) {
+      case 'table':
+        return op.tableTo;
+      case 'column':
+        return op.columnTo;
+      case 'add-column':
+        return `${op.columnTo} (${op.type})`;
+      case 'drop-table':
+      case 'drop-column':
+      case 'drop-index':
+        return <span className="text-destructive font-semibold">ELIMINAR</span>;
+      default:
+        return '-';
+    }
+  }
+
 
   return (
     <>
@@ -120,7 +224,7 @@ export function PlanBuilder() {
                     <CardTitle>Plan de Refactorización</CardTitle>
                 </div>
                 <CardDescription>
-                    Cree su lista de operaciones de refactorización.
+                    Cree y ordene su lista de operaciones de refactorización.
                 </CardDescription>
             </div>
             <Button onClick={handleAddNew} size="sm">
@@ -134,7 +238,7 @@ export function PlanBuilder() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ámbito</TableHead>
+                  <TableHead>Operación</TableHead>
                   <TableHead>Desde</TableHead>
                   <TableHead>Hasta</TableHead>
                   <TableHead>Nota</TableHead>
@@ -146,17 +250,13 @@ export function PlanBuilder() {
                   state.plan.map((op) => (
                     <TableRow key={op.id}>
                       <TableCell>
-                        <Badge variant="secondary">{op.scope}</Badge>
+                        {getScopeBadge(op.scope)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {op.scope.includes('column')
-                          ? `${op.tableFrom}.${op.columnFrom}`
-                          : op.tableFrom}
+                        {renderFrom(op)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
-                        {op.scope.includes('column')
-                          ? op.columnTo
-                          : op.tableTo}
+                        {renderTo(op)}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{op.note || '-'}</TableCell>
                       <TableCell className="text-right">
@@ -173,7 +273,7 @@ export function PlanBuilder() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleRemove(op.id)}
-                              className="text-destructive"
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
@@ -195,11 +295,22 @@ export function PlanBuilder() {
           </div>
         </CardContent>
         <CardFooter className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={handleSuggestOrder} disabled={isAiLoading || state.plan.length < 2}>
+            <Button variant="outline" onClick={handleSuggestOrder} disabled={isAiLoading || state.plan.length < 2 || state.results.isLoading}>
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
                 Sugerir Orden (IA)
             </Button>
-            {/* Other action buttons will be added here */}
+             <Button variant="outline" onClick={() => handleAction(false)} disabled={state.results.isLoading}>
+                {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
+                Previsualizar Plan
+            </Button>
+            <Button onClick={() => handleAction(true)} disabled={state.results.isLoading}>
+                 {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ClipboardCheck className="mr-2 h-4 w-4"/>}
+                Aplicar Plan
+            </Button>
+            <Button variant="destructive" onClick={() => handleAction(false, true)} disabled={state.results.isLoading}>
+                 {state.results.isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+                Limpiar
+            </Button>
         </CardFooter>
       </Card>
     </>

@@ -8,7 +8,7 @@ export type ConnectionProps = WithSessionId | WithConnectionKey | WithConnection
 // Added a client-side `id` for easier state management in React.
 export type RenameOp = {
   id: string; 
-  scope: "table" | "column" | "add-column" | string;
+  scope: "table" | "column" | "add-column" | "drop-table" | "drop-column" | "drop-index" | string;
   area?: "write" | "read" | "both";
   tableFrom: string;
   tableTo?: string | null;
@@ -132,7 +132,7 @@ export type RefactorResponse = {
 export type CleanupResponse = {
   ok: boolean;
   log: string[];
-  sql: { cleanupSql?: string };
+  sql: SqlScripts;
 };
 
 export type CodeFixResponse = CodeFixResult & {
