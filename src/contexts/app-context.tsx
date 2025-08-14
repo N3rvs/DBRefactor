@@ -2,15 +2,15 @@
 
 import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
-import type { RenameOp, CodeFixResult, SqlScripts, TableInfo, GenerateOptions } from '@/lib/types';
+import type { RenameOp, CodeFixRunResult, SqlBundle, TableInfo, GenerateOptions } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
 
 
 interface AppState {
   plan: RenameOp[];
   results: {
-    sql: SqlScripts | null;
-    codefix: CodeFixResult | null;
+    sql: SqlBundle | null;
+    codefix: CodeFixRunResult | null;
     dbLog: string[] | null;
     isLoading: boolean;
     error: string | null;
@@ -41,10 +41,10 @@ const initialState: AppState = {
   },
   options: {
     rootKey: 'SOLUTION',
-    useSynonyms: true,
-    useViews: true,
-    cqrs: false,
-    allowDestructive: false,
+    UseSynonyms: true,
+    UseViews: true,
+    Cqrs: false,
+    AllowDestructive: false,
   }
 };
 
@@ -54,7 +54,7 @@ type Action =
   | { type: 'REMOVE_OPERATION'; payload: string } // id
   | { type: 'SET_PLAN'; payload: RenameOp[] }
   | { type: 'SET_RESULTS_LOADING'; payload: boolean }
-  | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlScripts | null; codefix: CodeFixResult | null; dbLog: string[] | null; } }
+  | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlBundle | null; codefix: CodeFixRunResult | null; dbLog: string[] | null; } }
   | { type: 'SET_RESULTS_ERROR'; payload: string | null }
   | { type: 'CLEAR_RESULTS' }
   | { type: 'SET_SCHEMA_LOADING'; payload: boolean }
@@ -65,7 +65,9 @@ type Action =
 const appReducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
     case 'ADD_OPERATION':
-      return { ...state, plan: [...state.plan, action.payload] };
+      // Client-side id
+      const newOpWithId = { ...action.payload, id: Date.now().toString() };
+      return { ...state, plan: [...state.plan, newOpWithId] };
     case 'UPDATE_OPERATION':
       return {
         ...state,
@@ -79,7 +81,9 @@ const appReducer = (state: AppState, action: Action): AppState => {
         plan: state.plan.filter((op) => op.id !== action.payload),
       };
     case 'SET_PLAN':
-      return { ...state, plan: action.payload };
+        // Ensure client-side ids are added if missing
+      const planWithIds = action.payload.map((op, index) => op.id ? op : {...op, id: `${Date.now()}-${index}`});
+      return { ...state, plan: planWithIds };
     case 'SET_RESULTS_LOADING':
       return { ...state, results: { ...initialState.results, isLoading: action.payload } };
     case 'SET_RESULTS_SUCCESS':

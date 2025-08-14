@@ -10,19 +10,19 @@ import type { RenameOp } from '@/lib/types';
 
 
 export function SchemaCard() {
-  const { state, dbSession, dispatch } = useAppContext();
+  const { state, dbSession } = useAppContext();
   const { sessionId } = dbSession;
   const { schema } = state;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<RenameOp | null>(null);
 
-  const handleAddOperation = (op: Omit<RenameOp, 'id' | 'note'>) => {
+  const handleAddOperation = (op: Partial<Omit<RenameOp, 'id' | 'Note'>>) => {
     const newOperation: Partial<RenameOp> = {
       ...op,
-      tableTo: op.scope === 'table' ? '' : undefined,
-      columnFrom: op.scope === 'column' ? op.columnFrom : undefined,
-      columnTo: op.scope.includes('column') ? '' : undefined,
-      type: op.scope === 'add-column' ? '' : undefined,
+      TableTo: op.Scope === 'table' ? '' : undefined,
+      ColumnFrom: op.Scope === 'column' ? op.ColumnFrom : undefined,
+      ColumnTo: op.Scope?.includes('column') ? '' : undefined,
+      Type: op.Scope === 'add-column' ? '' : undefined,
     };
     setEditingOp(newOperation as RenameOp);
     setIsDialogOpen(true);

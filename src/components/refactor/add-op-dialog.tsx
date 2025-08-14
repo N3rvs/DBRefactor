@@ -18,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, Controller } from 'react-hook-form';
-import type { RenameOp } from '@/lib/types';
+import type { RenameOp, RenameItemDto } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { useEffect, useState } from 'react';
 
@@ -29,35 +30,71 @@ interface AddOpDialogProps {
   operation: RenameOp | null;
 }
 
-type FormData = Omit<RenameOp, 'id'>;
+// Usamos el DTO para el formulario, ya que el 'id' es del lado del cliente.
+type FormData = RenameItemDto;
+
+// Tipos de datos SQL comunes para el selector
+const sqlDataTypes = [
+  'int', 'bigint', 'smallint', 'tinyint', 'decimal(18, 2)', 'numeric(18, 2)', 'money',
+  'float', 'real',
+  'date', 'datetime', 'datetime2', 'smalldatetime', 'time',
+  'char(10)', 'varchar(50)', 'varchar(255)', 'varchar(max)', 'text',
+  'nchar(10)', 'nvarchar(50)', 'nvarchar(255)', 'nvarchar(max)', 'ntext',
+  'binary(50)', 'varbinary(50)', 'varbinary(max)', 'image',
+  'bit', 'uniqueidentifier', 'xml',
+  'Personalizado'
+];
 
 export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) {
-  const { dispatch } = useAppContext();
-  const { register, handleSubmit, control, watch, reset, formState: { errors } } = useForm<FormData>();
-  const scope = watch('scope');
+  const { dispatch, state: { schema } } = useAppContext();
+  const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>();
+  
+  const scope = watch('Scope');
+  const typeSelection = watch('Type');
+  const [isCustomType, setIsCustomType] = useState(false);
+  const [isForeignKey, setIsForeignKey] = useState(false);
 
   useEffect(() => {
     if (operation) {
-      reset(operation);
+      const { id, ...dto } = operation; // Excluir id del cliente
+      reset(dto);
     } else {
       reset({
-        scope: 'table',
-        tableFrom: '',
-        tableTo: '',
-        columnFrom: '',
-        columnTo: '',
-        type: '',
-        note: '',
+        Scope: 'table',
+        TableFrom: '',
+        TableTo: '',
+        ColumnFrom: '',
+        ColumnTo: '',
+        Type: sqlDataTypes[0],
+        Note: '',
       });
     }
+    setIsForeignKey(false);
+    setIsCustomType(false);
   }, [operation, reset, isOpen]);
-  
 
+  useEffect(() => {
+    if (typeSelection === 'Personalizado') {
+      setIsCustomType(true);
+      setValue('Type', ''); // Limpiar para que el usuario escriba
+    } else {
+      setIsCustomType(false);
+    }
+  }, [typeSelection, setValue]);
+  
   const onSubmit = (data: FormData) => {
-    if (operation) {
+    // Si es un tipo personalizado vacío, no se envía
+    if (data.Scope === 'add-column' && isCustomType && !data.Type) {
+        // Opcional: mostrar error
+        return;
+    }
+      
+    if (operation && operation.id) {
+      // Es una actualización
       dispatch({ type: 'UPDATE_OPERATION', payload: { ...data, id: operation.id } });
     } else {
-      dispatch({ type: 'ADD_OPERATION', payload: { ...data, id: Date.now().toString() } });
+      // Es una nueva operación
+      dispatch({ type: 'ADD_OPERATION', payload: data as RenameOp });
     }
     setIsOpen(false);
   };
@@ -68,14 +105,14 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Tabla Original</Label>
-              <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-              {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="TableFrom">Tabla Original</Label>
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+              {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tableTo">Tabla Nueva</Label>
-              <Input id="tableTo" {...register('tableTo', { required: true })} />
-              {errors.tableTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="TableTo">Tabla Nueva</Label>
+              <Input id="TableTo" {...register('TableTo', { required: true })} />
+              {errors.TableTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
           </>
         );
@@ -83,23 +120,23 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Tabla</Label>
-              <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-              {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="TableFrom">Tabla</Label>
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+              {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnFrom">Columna Original</Label>
-              <Input id="columnFrom" {...register('columnFrom', { required: true })} />
-              {errors.columnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="ColumnFrom">Columna Original</Label>
+              <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} />
+              {errors.ColumnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnTo">Columna Nueva</Label>
-              <Input id="columnTo" {...register('columnTo', { required: true })} />
-              {errors.columnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="ColumnTo">Columna Nueva</Label>
+              <Input id="ColumnTo" {...register('ColumnTo', { required: true })} />
+              {errors.ColumnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo (si cambia)</Label>
-              <Input id="type" {...register('type')} placeholder="ej., nvarchar(255)" />
+              <Label htmlFor="Type">Tipo (si cambia)</Label>
+              <Input id="Type" {...register('Type')} placeholder="ej., nvarchar(255)" />
             </div>
           </>
         );
@@ -107,19 +144,42 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Tabla</Label>
-              <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-               {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="TableFrom">Tabla</Label>
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+               {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnTo">Nombre Nueva Columna</Label>
-              <Input id="columnTo" {...register('columnTo', { required: true })} />
-              {errors.columnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="ColumnTo">Nombre Nueva Columna</Label>
+              <Input id="ColumnTo" {...register('ColumnTo', { required: true })} />
+              {errors.ColumnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Tipo de Columna</Label>
-              <Input id="type" {...register('type', { required: true })} placeholder="ej., nvarchar(max)" />
-               {errors.type && <p className="text-destructive text-sm">Este campo es requerido</p>}
+              <Label htmlFor="Type">Tipo de Columna</Label>
+              <Controller
+                name="Type"
+                control={control}
+                rules={{ required: !isCustomType }}
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sqlDataTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {isCustomType && (
+                <Input
+                  {...register('Type', { required: true })}
+                  placeholder="Especifique el tipo, ej: nvarchar(max)"
+                  className="mt-2"
+                />
+              )}
+               {errors.Type && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
           </>
         );
@@ -140,9 +200,9 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="scope">Ámbito</Label>
+              <Label htmlFor="Scope">Ámbito</Label>
               <Controller
-                name="scope"
+                name="Scope"
                 control={control}
                 defaultValue="table"
                 render={({ field }) => (
@@ -161,8 +221,8 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
             </div>
             {renderFields()}
             <div className="space-y-2">
-              <Label htmlFor="note">Nota (Opcional)</Label>
-              <Textarea id="note" {...register('note')} />
+              <Label htmlFor="Note">Nota (Opcional)</Label>
+              <Textarea id="Note" {...register('Note')} />
             </div>
           </div>
           <DialogFooter>

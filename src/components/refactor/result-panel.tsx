@@ -39,9 +39,9 @@ export function ResultPanel() {
             <Skeleton className="h-40 w-full" />
           </div>
         ) : results.error ? (
-          <div className="text-destructive p-4 border border-destructive/50 rounded-md">
+          <div className="text-destructive p-4 border border-destructive/50 rounded-md bg-destructive/10">
             <h4 className="font-bold">Error</h4>
-            <p>{results.error}</p>
+            <p className="font-mono text-sm">{results.error}</p>
           </div>
         ) : !hasResults ? (
           <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">

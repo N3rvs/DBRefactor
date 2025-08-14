@@ -2,11 +2,11 @@
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CodeFixResult } from '@/lib/types';
+import { CodeFixRunResult } from '@/lib/types';
 import { CheckCircle2, File, FileX2 } from 'lucide-react';
 
 interface CodeFixPreviewTabProps {
-  codefix: CodeFixResult | null;
+  codefix: CodeFixRunResult | null;
 }
 
 export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
@@ -17,11 +17,11 @@ export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4 rounded-md border bg-muted">
             <p className="text-sm text-muted-foreground">Archivos Escaneados</p>
-            <p className="text-2xl font-bold">{codefix.scanned}</p>
+            <p className="text-2xl font-bold">{codefix.FilesScanned}</p>
         </div>
         <div className="p-4 rounded-md border bg-muted">
             <p className="text-sm text-muted-foreground">Archivos Modificados</p>
-            <p className="text-2xl font-bold text-primary">{codefix.changed}</p>
+            <p className="text-2xl font-bold text-primary">{codefix.FilesChanged}</p>
         </div>
       </div>
       
@@ -35,17 +35,17 @@ export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {codefix.files.filter(f => f.changed).length > 0 ? (
-                    codefix.files.filter(f => f.changed).map((file, index) => (
+                {codefix.Changes.filter(f => f.Changed).length > 0 ? (
+                    codefix.Changes.filter(f => f.Changed).map((file, index) => (
                     <TableRow key={index}>
                         <TableCell>
-                            {file.changed ? (
+                            {file.Changed ? (
                                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                             ) : (
                                 <FileX2 className="h-5 w-5 text-muted-foreground" />
                             )}
                         </TableCell>
-                        <TableCell className="font-mono text-xs">{file.path}</TableCell>
+                        <TableCell className="font-mono text-xs">{file.Path}</TableCell>
                     </TableRow>
                     ))
                 ) : (

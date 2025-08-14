@@ -2,11 +2,11 @@
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { SqlScripts } from '@/lib/types';
+import { SqlBundle } from '@/lib/types';
 import { ClipboardCopy } from 'lucide-react';
 
 interface SqlPreviewTabProps {
-  sql: SqlScripts | null;
+  sql: SqlBundle | null;
 }
 
 export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
@@ -47,18 +47,18 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
   return (
     <Tabs defaultValue="rename" className="w-full">
       <TabsList>
-        <TabsTrigger value="rename" disabled={!sql.renameSql}>Renombrar</TabsTrigger>
-        <TabsTrigger value="compat" disabled={!sql.compatSql}>Compatibilidad</TabsTrigger>
-        <TabsTrigger value="cleanup" disabled={!sql.cleanupSql}>Limpieza</TabsTrigger>
+        <TabsTrigger value="rename" disabled={!sql.RenameSql}>Renombrar</TabsTrigger>
+        <TabsTrigger value="compat" disabled={!sql.CompatSql}>Compatibilidad</TabsTrigger>
+        <TabsTrigger value="cleanup" disabled={!sql.CleanupSql}>Limpieza</TabsTrigger>
       </TabsList>
       <TabsContent value="rename">
-        <CodeBlock content={sql.renameSql} title="Renombrar" />
+        <CodeBlock content={sql.RenameSql} title="Renombrar" />
       </TabsContent>
       <TabsContent value="compat">
-        <CodeBlock content={sql.compatSql} title="Compatibilidad" />
+        <CodeBlock content={sql.CompatSql} title="Compatibilidad" />
       </TabsContent>
       <TabsContent value="cleanup">
-        <CodeBlock content={sql.cleanupSql} title="Limpieza" />
+        <CodeBlock content={sql.CleanupSql} title="Limpieza" />
       </TabsContent>
     </Tabs>
   );

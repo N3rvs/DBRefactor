@@ -16,16 +16,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
-  onAddOperation: (op: Omit<RenameOp, 'id' | 'note'>) => void;
+  onAddOperation: (op: Partial<Omit<RenameOp, 'id'>>) => void;
 }
 
-const DetailTable = <T extends { name: string;[key: string]: any }>({
+const DetailTable = <T extends { Name: string;[key: string]: any }>({
   data,
   columns,
   caption,
@@ -51,7 +51,7 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
         </TableHeader>
         <TableBody>
           {data.map((item) => (
-            <TableRow key={item.name}>
+            <TableRow key={item.Name}>
                  {columns.map(col => <TableCell key={col.key} className="font-mono text-xs">{item[col.key]}</TableCell>)}
                  {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
             </TableRow>
@@ -65,53 +65,54 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
 export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   const { dispatch } = useAppContext();
 
-  const handleAddSimpleOperation = (op: Omit<RenameOp, 'id' | 'note'>) => {
-    dispatch({ type: 'ADD_OPERATION', payload: { ...op, id: Date.now().toString() } });
+  const handleAddSimpleOperation = (op: Omit<RenameOp, 'id' | 'Note'>) => {
+    dispatch({ type: 'ADD_OPERATION', payload: op as RenameOp });
   }
   
   const handleRenameTable = (table: TableInfo) => {
-    onAddOperation({ scope: 'table', tableFrom: table.name, tableTo: '' });
+    onAddOperation({ Scope: 'table', TableFrom: table.Name, TableTo: '' });
   };
 
   const handleDropTable = (table: TableInfo) => {
-    handleAddSimpleOperation({ scope: 'drop-table', tableFrom: table.name });
+    handleAddSimpleOperation({ Scope: 'drop-table', TableFrom: table.Name });
   };
   
   const handleAddColumn = (table: TableInfo) => {
-    onAddOperation({ scope: 'add-column', tableFrom: table.name, columnTo: '', type: '' });
+    onAddOperation({ Scope: 'add-column', TableFrom: table.Name, ColumnTo: '', Type: '' });
   };
 
   const handleRenameColumn = (table: TableInfo, column: ColumnInfo) => {
-    onAddOperation({ scope: 'column', tableFrom: table.name, columnFrom: column.name, columnTo: '' });
+    onAddOperation({ Scope: 'column', TableFrom: table.Name, ColumnFrom: column.Name, ColumnTo: '' });
   };
 
   const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
-    handleAddSimpleOperation({ scope: 'drop-column', tableFrom: table.name, columnFrom: column.name });
+    handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: table.Name, ColumnFrom: column.Name });
   };
   
   const handleDropIndex = (table: TableInfo, index: IndexInfo) => {
-    // Usamos columnFrom para guardar el nombre del índice
-    handleAddSimpleOperation({ scope: 'drop-index', tableFrom: table.name, columnFrom: index.name });
+    // Usamos ColumnFrom para guardar el nombre del índice, ya que no hay campo para ello.
+    // El backend debería saber cómo interpretar esto.
+    handleAddSimpleOperation({ Scope: 'drop-index', TableFrom: table.Name, ColumnFrom: index.Name });
   };
 
 
   return (
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
-        <AccordionItem value={table.name} key={table.name}>
+        <AccordionItem value={table.Name} key={table.Name}>
           <AccordionTrigger>
             <div className="flex items-center gap-4">
-                <span className="font-semibold text-base">{table.name}</span>
-                <Badge variant="outline">{table.schema}</Badge>
+                <span className="font-semibold text-base">{table.Name}</span>
+                <Badge variant="outline">{table.Schema}</Badge>
             </div>
             <div className="flex items-center gap-2 no-underline">
-                <DropdownMenu>
+                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()} // Detener la propagación
                             >
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -132,19 +133,18 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                     </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
-                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
             </div>
           </AccordionTrigger>
           <AccordionContent className="bg-muted/30 p-4 rounded-md">
             <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                <div><span className="font-semibold">Columnas:</span> {table.columns.length}</div>
-                <div><span className="font-semibold">Claves Foráneas:</span> {table.foreignKeys.length}</div>
-                <div><span className="font-semibold">Índices:</span> {table.indexes.length}</div>
+                <div><span className="font-semibold">Columnas:</span> {table.Columns.length}</div>
+                <div><span className="font-semibold">Claves Foráneas:</span> {table.ForeignKeys.length}</div>
+                <div><span className="font-semibold">Índices:</span> {table.Indexes.length}</div>
             </div>
 
             <DetailTable<ColumnInfo> 
-                data={table.columns}
-                columns={[{key: 'name', header: 'Nombre'}, {key: 'type', header: 'Tipo'}]}
+                data={table.Columns}
+                columns={[{key: 'Name', header: 'Nombre'}, {key: 'SqlType', header: 'Tipo'}]}
                 caption="Columnas"
                 actions={(column) => (
                   <DropdownMenu>
@@ -167,18 +167,18 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 )}
             />
             <DetailTable<ForeignKeyInfo> 
-                data={table.foreignKeys}
+                data={table.ForeignKeys}
                 columns={[
-                  {key: 'name', header: 'Nombre'}, 
-                  {key: 'fromColumn', header: 'Columna Origen'},
-                  {key: 'toTable', header: 'Tabla Destino'},
-                  {key: 'toColumn', header: 'Columna Destino'},
+                  {key: 'Name', header: 'Nombre'}, 
+                  {key: 'FromColumn', header: 'Columna Origen'},
+                  {key: 'ToTable', header: 'Tabla Destino'},
+                  {key: 'ToColumn', header: 'Columna Destino'},
                 ]}
                 caption="Claves Foráneas"
             />
              <DetailTable<IndexInfo> 
-                data={table.indexes}
-                columns={[{key: 'name', header: 'Nombre'}, {key: 'isUnique', header: 'Único'}, {key: 'columns', header: 'Columnas'}]}
+                data={table.Indexes}
+                columns={[{key: 'Name', header: 'Nombre'}, {key: 'IsUnique', header: 'Único'}, {key: 'Columns', header: 'Columnas'}]}
                 caption="Índices"
                 actions={(index) => (
                    <DropdownMenu>

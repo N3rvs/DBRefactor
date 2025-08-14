@@ -42,12 +42,12 @@ export function ConnectionCard() {
       });
       setConnectionString('');
 
-      if(connection.sessionId) {
+      if(connection.SessionId) {
         // Automatically analyze schema on successful connection
         dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
         try {
-          const response = await api.analyzeSchemaBySession({ sessionId: connection.sessionId });
-          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: response.tables });
+          const response = await api.analyzeSchemaBySession({ SessionId: connection.SessionId });
+          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: response.Tables });
         } catch (err) {
           const errorMsg = err instanceof Error ? err.message : 'Error al analizar el esquema.';
           dispatch({ type: 'SET_SCHEMA_ERROR', payload: errorMsg });

@@ -1,110 +1,153 @@
-// Conexiones: exactamente una
-export type WithSessionId        = { sessionId: string;    connectionKey?: never; connectionString?: never };
-export type WithConnectionKey    = { connectionKey: string; sessionId?: never;   connectionString?: never };
-export type WithConnectionString = { connectionString: string; sessionId?: never; connectionKey?: never };
-export type ConnectionProps = WithSessionId | WithConnectionKey | WithConnectionString;
+// types.ts
 
-// Tipos base
-// El `id` es solo para el cliente
-export type RenameOp = {
-  id: string;
-  scope: "table" | "column" | "add-column" | "drop-column" | "drop-table" | "drop-index";
-  area?: "write" | "read" | "both";
-  tableFrom: string;
-  tableTo?: string | null;
-  columnFrom?: string | null;
-  columnTo?: string | null;
-  type?: string | null;      // requerido en add-column y en "column" con cambio de tipo
-  note?: string | null;
+// Conexiones
+export type ConnectionProps = {
+  SessionId?: string;
+  ConnectionKey?: string;
+  ConnectionString?: string;
 };
+
+// ---- Schemas OpenAPI ----
+
+export type RenameOp = {
+  id: string; // id es solo para el cliente
+  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  TableFrom: string;
+  TableTo?: string | null;
+  ColumnFrom?: string | null;
+  ColumnTo?: string | null;
+  Type?: string | null;
+  Area?: 'write' | 'read' | 'both' | null;
+  Note?: string | null;
+  Default?: string | null;
+  Nullable?: boolean | null;
+  Length?: number | null;
+  Precision?: number | null;
+  Scale?: number | null;
+  Computed?: boolean | null;
+};
+
+export type RenameItemDto = Omit<RenameOp, 'id'>;
 
 export type GenerateOptions = {
-  useSynonyms?: boolean;     // compat para rename table
-  useViews?: boolean;        // compat para rename column
-  cqrs?: boolean;            // reservado
-  allowDestructive?: boolean;// habilita drop-*
+  UseSynonyms?: boolean;
+  UseViews?: boolean;
+  Cqrs?: boolean;
+  AllowDestructive?: boolean;
 };
 
-export type RefactorPlan = { renames: Omit<RenameOp, 'id'>[] };
+export type RefactorPlan = { Renames: RenameItemDto[] };
 
-// Resumen de schema
-export type ColumnInfo = { name: string; type: string; isNullable?: boolean };
-export type ForeignKeyInfo = { name: string; fromTable?: string; fromColumn?: string; toTable?: string; toColumn?: string };
-export type IndexInfo = { name: string; isUnique?: boolean; columns?: string[] };
-export type TableInfo = { schema: string; name: string; columns: ColumnInfo[]; foreignKeys: ForeignKeyInfo[]; indexes: IndexInfo[] };
+export interface ColumnInfo {
+  Name: string;
+  SqlType: string;
+  IsNullable: boolean;
+}
 
+export interface ForeignKeyInfo {
+  Name: string;
+  FromTable: string;
+  FromColumn: string;
+  ToTable: string;
+  ToColumn: string;
+}
 
-// Payloads de Request
+export interface IndexInfo {
+  Name: string;
+  IsUnique: boolean;
+  Columns: string[];
+}
+
+export interface TableInfo {
+  Schema: string;
+  Name: string;
+  Columns: ColumnInfo[];
+  ForeignKeys: ForeignKeyInfo[];
+  Indexes: IndexInfo[];
+}
+
+export type DbSchema = {
+  Tables: TableInfo[];
+};
+
+export type SqlBundle = {
+  RenameSql?: string;
+  CompatSql?: string;
+  CleanupSql?: string;
+};
+
+export type ChangedFile = {
+  Path: string;
+  Changed: boolean;
+};
+
+export type CodeFixRunResult = {
+  FilesScanned: number;
+  FilesChanged: number;
+  Changes: ChangedFile[];
+};
+
+// ---- Payloads de Request ----
+
 export type ConnectRequest = {
-  connectionString: string;
-  ttlSeconds?: number;
+  ConnectionString: string;
+  TtlSeconds?: number;
 };
 
 export type DisconnectRequest = {
-  sessionId: string;
+  SessionId: string;
 };
 
 export type AnalyzeSchemaRequest = ConnectionProps;
 
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  plan: RefactorPlan;
-  apply: boolean;
-  rootKey?: string;
+  Plan: RefactorPlan;
+  Apply: boolean;
+  RootKey?: string;
 };
 
 export type CleanupRequest = ConnectionProps & GenerateOptions & {
-  renames: Omit<RenameOp, 'id'>[];
+  Renames: RenameItemDto[];
 };
 
 export type CodeFixRequest = {
-  rootKey: string;
-  apply: boolean;
-  plan: RefactorPlan;
-  includeGlobs?: string[];
-  excludeGlobs?: string[];
+  RootKey: string;
+  Apply: boolean;
+  Plan: RefactorPlan;
+  IncludeGlobs?: string[];
+  ExcludeGlobs?: string[];
 };
 
-// Payloads de Response
+// ---- Payloads de Response ----
+
 export type ConnectResponse = {
-  sessionId: string;
-  expiresAtUtc: string;
+  SessionId: string;
+  ExpiresAtUtc: string;
 };
 
-export type AnalyzeSchemaResponse = {
-  tables: TableInfo[];
-};
-
-export type SqlScripts = {
-  renameSql?: string;
-  compatSql?: string;
-  cleanupSql?: string;
-};
-
-export type CodeFixResult = {
-  scanned: number;
-  changed: number;
-  files: { path: string; changed: boolean }[];
-};
+export type AnalyzeSchemaResponse = DbSchema;
 
 export type RefactorResponse = {
   ok: boolean;
   apply: boolean;
-  sql: SqlScripts;
-  codefix: CodeFixResult;
+  sql: SqlBundle;
+  codefix: CodeFixRunResult;
   dbLog?: string[];
 };
 
 export type CleanupResponse = {
   ok: boolean;
   log: string[];
-  sql: SqlScripts;
+  sql: SqlBundle;
 };
 
-export type CodeFixResponse = CodeFixResult & {
+export type CodeFixResponse = CodeFixRunResult & {
   ok: boolean;
 };
 
 export type ApiError = {
   message: string;
   error?: string;
+  title?: string;
+  detail?: string;
 };

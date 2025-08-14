@@ -34,9 +34,9 @@ const InfoTooltip = ({ content }: { content: string }) => (
 
 export function RefactorOptions() {
   const { state, dispatch } = useAppContext();
-  const { useSynonyms, useViews, allowDestructive } = state.options;
+  const { UseSynonyms, UseViews, AllowDestructive } = state.options;
 
-  const handleOptionChange = (option: 'useSynonyms' | 'useViews' | 'allowDestructive', value: boolean) => {
+  const handleOptionChange = (option: 'UseSynonyms' | 'UseViews' | 'AllowDestructive', value: boolean) => {
     dispatch({ type: 'SET_OPTION', payload: { key: option, value } });
   };
 
@@ -63,8 +63,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useSynonyms"
-              checked={useSynonyms}
-              onCheckedChange={(value) => handleOptionChange('useSynonyms', value)}
+              checked={UseSynonyms}
+              onCheckedChange={(value) => handleOptionChange('UseSynonyms', value)}
             />
           </div>
           <div className="flex items-center justify-between">
@@ -76,8 +76,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useViews"
-              checked={useViews}
-              onCheckedChange={(value) => handleOptionChange('useViews', value)}
+              checked={UseViews}
+              onCheckedChange={(value) => handleOptionChange('UseViews', value)}
             />
           </div>
           <Separator />
@@ -92,8 +92,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="allowDestructive"
-              checked={allowDestructive}
-              onCheckedChange={(value) => handleOptionChange('allowDestructive', value)}
+              checked={AllowDestructive}
+              onCheckedChange={(value) => handleOptionChange('AllowDestructive', value)}
             />
           </div>
         </CardContent>

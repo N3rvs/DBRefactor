@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { RenameOp } from '@/lib/types';
+import type { RenameOp, RenameItemDto } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -80,17 +80,17 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     try {
-      const plainRenames = state.plan.map(({ id, ...rest }) => rest);
-      const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
+      const plainRenames: RenameItemDto[] = state.plan.map(({ id, ...rest }) => rest);
+      const { rootKey, UseSynonyms, UseViews, Cqrs, AllowDestructive } = state.options;
 
       if (actionType === 'cleanup') {
         const response = await api.runCleanup({
-          sessionId,
-          renames: plainRenames,
-          useSynonyms,
-          useViews,
-          cqrs,
-          allowDestructive,
+          SessionId: sessionId,
+          Renames: plainRenames,
+          UseSynonyms,
+          UseViews,
+          Cqrs,
+          AllowDestructive,
         });
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
@@ -104,14 +104,13 @@ export function PlanBuilder() {
       } else {
         const isApply = actionType === 'apply';
         const response = await api.runRefactor({
-          sessionId,
-          plan: { renames: plainRenames },
-          apply: isApply,
-          rootKey,
-          useSynonyms,
-          useViews,
-          cqrs,
-          allowDestructive
+          SessionId: sessionId,
+          Plan: { Renames: plainRenames },
+          Apply: isApply,
+          RootKey: rootKey,
+          UseSynonyms,
+          UseViews,
+          Cqrs,
         });
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
@@ -154,18 +153,8 @@ export function PlanBuilder() {
         renames: plainRenames,
       });
 
-      const newOrderedPlan = aiResult.orderedRenames.map((op, index) => {
-        const originalOp = state.plan.find(p => 
-          p.scope === op.scope &&
-          p.tableFrom === op.tableFrom && 
-          p.columnFrom === op.columnFrom && 
-          p.tableTo === op.tableTo && 
-          p.columnTo === op.columnTo
-        );
-        return {
-          ...op,
-          id: originalOp?.id || `${Date.now()}-${index}`,
-        } as RenameOp;
+      const newOrderedPlan = aiResult.orderedRenames.map(op => {
+        return op as RenameOp;
       });
 
       dispatch({ type: 'SET_PLAN', payload: newOrderedPlan });
@@ -191,30 +180,30 @@ export function PlanBuilder() {
   }
 
   const renderFrom = (op: RenameOp) => {
-    switch (op.scope) {
+    switch (op.Scope) {
       case 'table':
       case 'drop-table':
-        return op.tableFrom;
+        return op.TableFrom;
       case 'column':
       case 'drop-column':
-        return `${op.tableFrom}.${op.columnFrom}`;
+        return `${op.TableFrom}.${op.ColumnFrom}`;
       case 'add-column':
-        return op.tableFrom;
+        return op.TableFrom;
       case 'drop-index':
-        return op.columnFrom; // Usando columnFrom para el nombre del índice
+        return op.ColumnFrom; // Usando columnFrom para el nombre del índice
       default:
         return '-';
     }
   }
 
   const renderTo = (op: RenameOp) => {
-     switch (op.scope) {
+     switch (op.Scope) {
       case 'table':
-        return op.tableTo;
+        return op.TableTo;
       case 'column':
-        return op.columnTo;
+        return op.ColumnTo;
       case 'add-column':
-        return `${op.columnTo} (${op.type})`;
+        return `${op.ColumnTo} (${op.Type})`;
       case 'drop-table':
       case 'drop-column':
       case 'drop-index':
@@ -268,7 +257,7 @@ export function PlanBuilder() {
                   state.plan.map((op) => (
                     <TableRow key={op.id}>
                       <TableCell>
-                        {getScopeBadge(op.scope)}
+                        {getScopeBadge(op.Scope)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {renderFrom(op)}
@@ -276,7 +265,7 @@ export function PlanBuilder() {
                       <TableCell className="font-mono text-xs">
                         {renderTo(op)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{op.note || '-'}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{op.Note || '-'}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
