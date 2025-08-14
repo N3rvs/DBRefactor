@@ -67,7 +67,7 @@ export function ConnectionCard() {
   const handleDisconnect = async () => {
     if (!sessionId) return;
     try {
-      await disconnect(sessionId);
+      await disconnect();
       toast({
         title: 'Éxito',
         description: 'Desconectado de la base de datos.',
