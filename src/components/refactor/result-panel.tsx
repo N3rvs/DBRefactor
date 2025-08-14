@@ -26,10 +26,10 @@ export function ResultPanel() {
       <CardHeader>
         <div className="flex items-center gap-3">
           <BrainCircuit className="w-6 h-6 text-primary" />
-          <CardTitle>Results</CardTitle>
+          <CardTitle>Resultados</CardTitle>
         </div>
         <CardDescription>
-          Preview SQL, code changes, and execution logs here.
+          Previsualice SQL, cambios de código y registros de ejecución aquí.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -45,14 +45,14 @@ export function ResultPanel() {
           </div>
         ) : !hasResults ? (
           <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
-            <p>Run a preview or apply changes to see results.</p>
+            <p>Ejecute una vista previa o aplique cambios para ver los resultados.</p>
           </div>
         ) : (
           <Tabs defaultValue="sql">
             <TabsList>
               <TabsTrigger value="sql" disabled={!results.sql}>SQL</TabsTrigger>
-              <TabsTrigger value="codefix" disabled={!results.codefix}>CodeFix</TabsTrigger>
-              <TabsTrigger value="log" disabled={!results.dbLog}>DB Log</TabsTrigger>
+              <TabsTrigger value="codefix" disabled={!results.codefix}>Corrección de Código</TabsTrigger>
+              <TabsTrigger value="log" disabled={!results.dbLog}>Registro BD</TabsTrigger>
             </TabsList>
             <TabsContent value="sql">
                 <SqlPreviewTab sql={results.sql} />

@@ -67,14 +67,14 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Table From</Label>
+              <Label htmlFor="tableFrom">Tabla Original</Label>
               <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-              {errors.tableFrom && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tableTo">Table To</Label>
+              <Label htmlFor="tableTo">Tabla Nueva</Label>
               <Input id="tableTo" {...register('tableTo', { required: true })} />
-              {errors.tableTo && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.tableTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
           </>
         );
@@ -82,23 +82,23 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Table</Label>
+              <Label htmlFor="tableFrom">Tabla</Label>
               <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-              {errors.tableFrom && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnFrom">Column From</Label>
+              <Label htmlFor="columnFrom">Columna Original</Label>
               <Input id="columnFrom" {...register('columnFrom', { required: true })} />
-              {errors.columnFrom && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.columnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnTo">Column To</Label>
+              <Label htmlFor="columnTo">Columna Nueva</Label>
               <Input id="columnTo" {...register('columnTo', { required: true })} />
-              {errors.columnTo && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.columnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Type (if changing)</Label>
-              <Input id="type" {...register('type')} placeholder="e.g., nvarchar(255)" />
+              <Label htmlFor="type">Tipo (si cambia)</Label>
+              <Input id="type" {...register('type')} placeholder="ej., nvarchar(255)" />
             </div>
           </>
         );
@@ -106,19 +106,19 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return (
           <>
             <div className="space-y-2">
-              <Label htmlFor="tableFrom">Table</Label>
+              <Label htmlFor="tableFrom">Tabla</Label>
               <Input id="tableFrom" {...register('tableFrom', { required: true })} />
-               {errors.tableFrom && <p className="text-destructive text-sm">This field is required</p>}
+               {errors.tableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="columnTo">New Column Name</Label>
+              <Label htmlFor="columnTo">Nombre Nueva Columna</Label>
               <Input id="columnTo" {...register('columnTo', { required: true })} />
-              {errors.columnTo && <p className="text-destructive text-sm">This field is required</p>}
+              {errors.columnTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="type">Column Type</Label>
-              <Input id="type" {...register('type', { required: true })} placeholder="e.g., int" />
-              {errors.type && <p className="text-destructive text-sm">This field is required</p>}
+              <Label htmlFor="type">Tipo de Columna</Label>
+              <Input id="type" {...register('type', { required: true })} placeholder="ej., int" />
+              {errors.type && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
           </>
         );
@@ -132,14 +132,14 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
-            <DialogTitle>{operation ? 'Edit' : 'Add'} Operation</DialogTitle>
+            <DialogTitle>{operation ? 'Editar' : 'Añadir'} Operación</DialogTitle>
             <DialogDescription>
-              Fill in the details for the refactoring operation.
+              Complete los detalles para la operación de refactorización.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="scope">Scope</Label>
+              <Label htmlFor="scope">Ámbito</Label>
               <Controller
                 name="scope"
                 control={control}
@@ -147,12 +147,12 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
                 render={({ field }) => (
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a scope" />
+                      <SelectValue placeholder="Seleccione un ámbito" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="table">Rename Table</SelectItem>
-                      <SelectItem value="column">Rename Column</SelectItem>
-                      <SelectItem value="add-column">Add Column</SelectItem>
+                      <SelectItem value="table">Renombrar Tabla</SelectItem>
+                      <SelectItem value="column">Renombrar Columna</SelectItem>
+                      <SelectItem value="add-column">Añadir Columna</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
@@ -160,13 +160,13 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
             </div>
             {renderFields()}
             <div className="space-y-2">
-              <Label htmlFor="note">Note (Optional)</Label>
+              <Label htmlFor="note">Nota (Opcional)</Label>
               <Textarea id="note" {...register('note')} />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit">Save</Button>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancelar</Button>
+            <Button type="submit">Guardar</Button>
           </DialogFooter>
         </form>
       </DialogContent>

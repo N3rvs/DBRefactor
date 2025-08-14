@@ -17,7 +17,7 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
   const handleCopy = (text: string | undefined, name: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
-    toast({ title: 'Copied!', description: `${name} script copied to clipboard.` });
+    toast({ title: '¡Copiado!', description: `Script de ${name} copiado al portapapeles.` });
   };
 
   const CodeBlock = ({
@@ -29,7 +29,7 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
   }) => (
     <div className="relative">
       <pre className="bg-muted/50 p-4 rounded-md border text-sm overflow-x-auto max-h-80">
-        <code>{content || `// No ${title} script generated.`}</code>
+        <code>{content || `// No se generó ningún script de ${title}.`}</code>
       </pre>
       <Button
         size="icon"
@@ -37,7 +37,7 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
         className="absolute top-2 right-2 h-7 w-7"
         onClick={() => handleCopy(content, title)}
         disabled={!content}
-        aria-label={`Copy ${title} SQL`}
+        aria-label={`Copiar SQL de ${title}`}
       >
         <ClipboardCopy className="h-4 w-4" />
       </Button>
@@ -47,18 +47,18 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
   return (
     <Tabs defaultValue="rename" className="w-full">
       <TabsList>
-        <TabsTrigger value="rename" disabled={!sql.renameSql}>Rename</TabsTrigger>
-        <TabsTrigger value="compat" disabled={!sql.compatSql}>Compatibility</TabsTrigger>
-        <TabsTrigger value="cleanup" disabled={!sql.cleanupSql}>Cleanup</TabsTrigger>
+        <TabsTrigger value="rename" disabled={!sql.renameSql}>Renombrar</TabsTrigger>
+        <TabsTrigger value="compat" disabled={!sql.compatSql}>Compatibilidad</TabsTrigger>
+        <TabsTrigger value="cleanup" disabled={!sql.cleanupSql}>Limpieza</TabsTrigger>
       </TabsList>
       <TabsContent value="rename">
-        <CodeBlock content={sql.renameSql} title="Rename" />
+        <CodeBlock content={sql.renameSql} title="Renombrar" />
       </TabsContent>
       <TabsContent value="compat">
-        <CodeBlock content={sql.compatSql} title="Compatibility" />
+        <CodeBlock content={sql.compatSql} title="Compatibilidad" />
       </TabsContent>
       <TabsContent value="cleanup">
-        <CodeBlock content={sql.cleanupSql} title="Cleanup" />
+        <CodeBlock content={sql.cleanupSql} title="Limpieza" />
       </TabsContent>
     </Tabs>
   );

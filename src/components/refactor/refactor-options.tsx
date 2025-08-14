@@ -22,16 +22,16 @@ export function RefactorOptions() {
       <CardHeader>
         <div className="flex items-center gap-3">
           <Settings2 className="w-6 h-6 text-primary" />
-          <CardTitle>Refactor Options</CardTitle>
+          <CardTitle>Opciones de Refactorización</CardTitle>
         </div>
         <CardDescription>
-          Configure compatibility and cleanup options.
+          Configura las opciones de compatibilidad y limpieza.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label htmlFor="useSynonyms" className="font-semibold">Use Synonyms</Label>
+            <Label htmlFor="useSynonyms" className="font-semibold">Usar Sinónimos</Label>
             <Switch
               id="useSynonyms"
               checked={useSynonyms}
@@ -39,27 +39,27 @@ export function RefactorOptions() {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            Creates synonyms for renamed tables/columns for backward compatibility. This allows old code to function without immediate updates.
+            Crea sinónimos para las tablas/columnas renombradas para compatibilidad con versiones anteriores. Esto permite que el código antiguo funcione sin actualizaciones inmediatas.
           </p>
         </div>
         <Separator />
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <Label htmlFor="useViews" className="font-semibold">Use Views</Label>
+                <Label htmlFor="useViews" className="font-semibold">Usar Vistas</Label>
                 <Switch id="useViews" checked={useViews} onCheckedChange={setUseViews} />
             </div>
             <p className="text-sm text-muted-foreground">
-                Generates views that mimic the original table structure, ensuring that read queries from legacy systems continue to work seamlessly.
+                Genera vistas que imitan la estructura original de la tabla, asegurando que las consultas de lectura de los sistemas heredados continúen funcionando sin problemas.
             </p>
         </div>
         <Separator />
         <div className="space-y-3">
             <div className="flex items-center justify-between">
-                <Label htmlFor="useCqrs" className="font-semibold">Use CQRS Views</Label>
+                <Label htmlFor="useCqrs" className="font-semibold">Usar Vistas CQRS</Label>
                 <Switch id="useCqrs" checked={useCqrs} onCheckedChange={setUseCqrs} />
             </div>
             <p className="text-sm text-muted-foreground">
-                Implements Command Query Responsibility Segregation by creating separate views for read operations, isolating them from write operations.
+                Implementa la Segregación de Responsabilidad de Consulta y Comando (CQRS) creando vistas separadas para operaciones de lectura, aislándolas de las operaciones de escritura.
             </p>
         </div>
       </CardContent>

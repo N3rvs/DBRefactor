@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, Database, Loader2, XCircle } from 'lucide-react';
 import { useDbSession } from '@/hooks/use-db-session';
 import { formatDistanceToNow } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export function ConnectionCard() {
   const [connectionString, setConnectionString] = useState('');
@@ -25,22 +26,22 @@ export function ConnectionCard() {
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: 'Connection string cannot be empty.',
+        description: 'La cadena de conexión no puede estar vacía.',
       });
       return;
     }
     try {
       await connect(connectionString);
       toast({
-        title: 'Success',
-        description: 'Connected to database successfully.',
+        title: 'Éxito',
+        description: 'Conectado a la base de datos con éxito.',
       });
       setConnectionString('');
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Connection Failed',
-        description: err instanceof Error ? err.message : 'An unknown error occurred.',
+        title: 'Conexión Fallida',
+        description: err instanceof Error ? err.message : 'Ocurrió un error desconocido.',
       });
     }
   };
@@ -49,14 +50,14 @@ export function ConnectionCard() {
     try {
       await disconnect();
       toast({
-        title: 'Success',
-        description: 'Disconnected from database.',
+        title: 'Éxito',
+        description: 'Desconectado de la base de datos.',
       });
     } catch (err) {
       toast({
         variant: 'destructive',
-        title: 'Disconnect Failed',
-        description: err instanceof Error ? err.message : 'An unknown error occurred.',
+        title: 'Desconexión Fallida',
+        description: err instanceof Error ? err.message : 'Ocurrió un error desconocido.',
       });
     }
   };
@@ -66,10 +67,10 @@ export function ConnectionCard() {
       <CardHeader>
         <div className="flex items-center gap-3">
           <Database className="w-6 h-6 text-primary" />
-          <CardTitle>Database Connection</CardTitle>
+          <CardTitle>Conexión de Base de Datos</CardTitle>
         </div>
         <CardDescription>
-          Connect to your database to begin refactoring.
+          Conéctese a su base de datos para comenzar a refactorizar.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -78,29 +79,29 @@ export function ConnectionCard() {
             <div className="flex items-center gap-3 p-3 rounded-md bg-green-500/10 text-green-400 border border-green-500/20">
               <CheckCircle className="w-5 h-5" />
               <div>
-                <p className="font-semibold">Connected</p>
+                <p className="font-semibold">Conectado</p>
                 <p className="text-xs text-muted-foreground">
-                  Session ID: <span className="font-mono">{sessionId.substring(0, 8)}...</span>
+                  ID de Sesión: <span className="font-mono">{sessionId.substring(0, 8)}...</span>
                 </p>
               </div>
             </div>
              {expiresAtUtc && (
               <p className="text-sm text-muted-foreground">
-                Session expires {formatDistanceToNow(new Date(expiresAtUtc), { addSuffix: true })}.
+                La sesión expira {formatDistanceToNow(new Date(expiresAtUtc), { addSuffix: true, locale: es })}.
               </p>
             )}
           </div>
         ) : (
           <div className="space-y-4">
             <Textarea
-              placeholder="Enter your database connection string..."
+              placeholder="Ingrese su cadena de conexión a la base de datos..."
               value={connectionString}
               onChange={(e) => setConnectionString(e.target.value)}
               className="min-h-[100px] font-mono text-sm"
               autoComplete="off"
               data-lpignore="true"
               inputMode="none"
-              aria-label="Database Connection String"
+              aria-label="Cadena de Conexión de la Base de Datos"
             />
              {error && (
               <div className="flex items-center gap-2 text-destructive text-sm">
@@ -120,12 +121,12 @@ export function ConnectionCard() {
             className="w-full"
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Disconnect
+            Desconectar
           </Button>
         ) : (
           <Button onClick={handleConnect} disabled={isLoading} className="w-full">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Connect
+            Conectar
           </Button>
         )}
       </CardFooter>

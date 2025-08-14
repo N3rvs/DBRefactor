@@ -16,22 +16,22 @@ export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4 rounded-md border bg-muted">
-            <p className="text-sm text-muted-foreground">Files Scanned</p>
+            <p className="text-sm text-muted-foreground">Archivos Escaneados</p>
             <p className="text-2xl font-bold">{codefix.scanned}</p>
         </div>
         <div className="p-4 rounded-md border bg-muted">
-            <p className="text-sm text-muted-foreground">Files Changed</p>
+            <p className="text-sm text-muted-foreground">Archivos Modificados</p>
             <p className="text-2xl font-bold text-primary">{codefix.changed}</p>
         </div>
       </div>
       
-      <p className="text-sm font-medium">Changed Files:</p>
+      <p className="text-sm font-medium">Archivos Modificados:</p>
       <ScrollArea className="h-72 w-full rounded-md border">
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Path</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Ruta</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -51,7 +51,7 @@ export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
                 ) : (
                     <TableRow>
                         <TableCell colSpan={2} className="h-24 text-center text-muted-foreground">
-                            No files were changed.
+                            No se modificaron archivos.
                         </TableCell>
                     </TableRow>
                 )}

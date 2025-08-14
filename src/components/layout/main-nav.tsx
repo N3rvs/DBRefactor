@@ -8,8 +8,8 @@ export function MainNav() {
   const pathname = usePathname();
 
   const navItems = [
-    { href: '/refactor', label: 'Refactor' },
-    { href: '/schema', label: 'Schema' },
+    { href: '/refactor', label: 'Refactorizar' },
+    { href: '/schema', label: 'Esquema' },
   ];
 
   return (

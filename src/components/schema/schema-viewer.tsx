@@ -30,7 +30,7 @@ const DetailTable = <T extends { name: string;[key: string]: any }>({
   caption: string;
 }) => {
   if (!data || data.length === 0) {
-    return <p className="text-sm text-muted-foreground mt-2">{caption} not found.</p>;
+    return <p className="text-sm text-muted-foreground mt-2">{caption} no encontrados.</p>;
   }
   return (
     <div className="my-4">
@@ -66,25 +66,25 @@ export function SchemaViewer({ tables }: SchemaViewerProps) {
           </AccordionTrigger>
           <AccordionContent className="bg-muted/30 p-4 rounded-md">
             <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-                <div><span className="font-semibold">Columns:</span> {table.columns.length}</div>
-                <div><span className="font-semibold">Foreign Keys:</span> {table.foreignKeys.length}</div>
-                <div><span className="font-semibold">Indexes:</span> {table.indexes.length}</div>
+                <div><span className="font-semibold">Columnas:</span> {table.columns.length}</div>
+                <div><span className="font-semibold">Claves Foráneas:</span> {table.foreignKeys.length}</div>
+                <div><span className="font-semibold">Índices:</span> {table.indexes.length}</div>
             </div>
 
             <DetailTable<ColumnInfo> 
                 data={table.columns}
-                columns={[{key: 'name', header: 'Name'}, {key: 'type', header: 'Type'}]}
-                caption="Columns"
+                columns={[{key: 'name', header: 'Nombre'}, {key: 'type', header: 'Tipo'}]}
+                caption="Columnas"
             />
             <DetailTable<FKInfo> 
                 data={table.foreignKeys}
-                columns={[{key: 'name', header: 'Name'}]}
-                caption="Foreign Keys"
+                columns={[{key: 'name', header: 'Nombre'}]}
+                caption="Claves Foráneas"
             />
              <DetailTable<IndexInfo> 
                 data={table.indexes}
-                columns={[{key: 'name', header: 'Name'}]}
-                caption="Indexes"
+                columns={[{key: 'name', header: 'Nombre'}]}
+                caption="Índices"
             />
           </AccordionContent>
         </AccordionItem>

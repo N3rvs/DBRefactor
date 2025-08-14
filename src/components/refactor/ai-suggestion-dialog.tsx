@@ -23,17 +23,17 @@ export function AISuggestionDialog({ isOpen, setIsOpen, rationale }: AISuggestio
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <Bot className="w-6 h-6 text-primary" />
-              <DialogTitle>AI Rationale</DialogTitle>
+              <DialogTitle>Justificación de la IA</DialogTitle>
             </div>
             <DialogDescription>
-              The AI has suggested an optimal ordering for your refactoring plan based on the following rationale:
+              La IA ha sugerido un orden óptimo para su plan de refactorización basado en la siguiente justificación:
             </DialogDescription>
           </DialogHeader>
           <div className="prose prose-sm dark:prose-invert bg-muted/50 p-4 rounded-md border max-h-60 overflow-y-auto">
             <p>{rationale}</p>
           </div>
           <DialogFooter>
-            <Button onClick={() => setIsOpen(false)}>Close</Button>
+            <Button onClick={() => setIsOpen(false)}>Cerrar</Button>
           </DialogFooter>
       </DialogContent>
     </Dialog>

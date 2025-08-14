@@ -20,18 +20,18 @@ export function RepoCard() {
       <CardHeader>
         <div className="flex items-center gap-3">
           <FolderGit2 className="w-6 h-6 text-primary" />
-          <CardTitle>Code Repository</CardTitle>
+          <CardTitle>Repositorio de Código</CardTitle>
         </div>
         <CardDescription>
-          Specify the root key for code analysis.
+          Especifique la clave raíz para el análisis de código.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-            <Label htmlFor="rootKey">Root Key</Label>
+            <Label htmlFor="rootKey">Clave Raíz</Label>
             <Input 
                 id="rootKey"
-                placeholder="e.g., SOLUTION or FRONT"
+                placeholder="ej., SOLUTION o FRONT"
                 value={rootKey}
                 onChange={(e) => setRootKey(e.target.value)}
             />

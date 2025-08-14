@@ -68,11 +68,11 @@ export function PlanBuilder() {
 
   const handleSuggestOrder = async () => {
     if (!sessionId) {
-      toast({ variant: 'destructive', title: 'Not connected', description: 'Please connect to a database first.' });
+      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
      if (state.plan.length < 2) {
-      toast({ title: 'Not enough operations', description: 'Add at least two operations to suggest an order.' });
+      toast({ title: 'No hay suficientes operaciones', description: 'Agregue al menos dos operaciones para sugerir un orden.' });
       return;
     }
     setIsAiLoading(true);
@@ -97,7 +97,7 @@ export function PlanBuilder() {
       setAiRationale(aiResult.rationale);
 
     } catch (err) {
-      toast({ variant: 'destructive', title: 'AI Suggestion Failed', description: err instanceof Error ? err.message : 'An unknown error occurred' });
+      toast({ variant: 'destructive', title: 'Sugerencia de IA Fallida', description: err instanceof Error ? err.message : 'Ocurrió un error desconocido' });
     } finally {
       setIsAiLoading(false);
     }
@@ -118,15 +118,15 @@ export function PlanBuilder() {
             <div>
                 <div className="flex items-center gap-3">
                     <ListOrdered className="w-6 h-6 text-primary" />
-                    <CardTitle>Refactoring Plan</CardTitle>
+                    <CardTitle>Plan de Refactorización</CardTitle>
                 </div>
                 <CardDescription>
-                    Build your list of refactoring operations.
+                    Cree su lista de operaciones de refactorización.
                 </CardDescription>
             </div>
             <Button onClick={handleAddNew} size="sm">
                 <PlusCircle className="mr-2 h-4 w-4" />
-                Add Operation
+                Añadir Operación
             </Button>
           </div>
         </CardHeader>
@@ -135,10 +135,10 @@ export function PlanBuilder() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>From</TableHead>
-                  <TableHead>To</TableHead>
-                  <TableHead>Note</TableHead>
+                  <TableHead>Ámbito</TableHead>
+                  <TableHead>Desde</TableHead>
+                  <TableHead>Hasta</TableHead>
+                  <TableHead>Nota</TableHead>
                   <TableHead className="w-[50px] text-right"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -170,14 +170,14 @@ export function PlanBuilder() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => handleEdit(op)}>
                               <Pencil className="mr-2 h-4 w-4" />
-                              Edit
+                              Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleRemove(op.id)}
                               className="text-destructive"
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
+                              Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -187,7 +187,7 @@ export function PlanBuilder() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                      No operations added yet.
+                      Aún no se han añadido operaciones.
                     </TableCell>
                   </TableRow>
                 )}
@@ -198,7 +198,7 @@ export function PlanBuilder() {
         <CardFooter className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={handleSuggestOrder} disabled={isAiLoading || state.plan.length < 2}>
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
-                Suggest Order (AI)
+                Sugerir Orden (IA)
             </Button>
             {/* Other action buttons will be added here */}
         </CardFooter>
