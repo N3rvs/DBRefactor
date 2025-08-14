@@ -100,19 +100,24 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
       {tables.map((table) => (
         <AccordionItem value={table.name} key={table.name}>
           <AccordionTrigger asChild>
-            <div className="flex items-center justify-between w-full py-4 hover:underline">
+             <div className="flex items-center justify-between w-full py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180">
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-base">{table.name}</span>
                 <Badge variant="outline">{table.schema}</Badge>
               </div>
-               <div onClick={(e) => e.stopPropagation()} className="mr-4 no-underline">
+               <div className="mr-4 no-underline">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                     <Button variant="ghost" size="icon" className="h-8 w-8">
+                     <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenuItem onClick={() => handleRenameTable(table)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Renombrar Tabla
@@ -149,7 +154,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem onClick={() => handleRenameColumn(table, column)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Renombrar Columna
@@ -178,7 +183,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenuItem onClick={() => handleDropIndex(table, index)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Eliminar Índice
