@@ -82,6 +82,7 @@ export function PlanBuilder() {
     try {
       const plainRenames = state.plan.map(({ id, ...rest }) => rest);
       let response;
+      const { rootKey, useSynonyms, useViews, cqrs } = state.options;
 
       if (cleanup) {
         response = await api.runCleanup({ sessionId, renames: plainRenames });
@@ -100,10 +101,10 @@ export function PlanBuilder() {
           sessionId,
           plan: { renames: plainRenames },
           apply,
-          rootKey: 'SOLUTION',
-          useSynonyms: true,
-          useViews: true,
-          cqrs: true
+          rootKey,
+          useSynonyms,
+          useViews,
+          cqrs
         });
         dispatch({
           type: 'SET_RESULTS_SUCCESS',

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type { RenameOp, CodeFixResult, SqlScripts, TableInfo } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
@@ -20,6 +20,12 @@ interface AppState {
     isLoading: boolean;
     error: string | null;
   };
+  options: {
+    rootKey: string;
+    useSynonyms: boolean;
+    useViews: boolean;
+    cqrs: boolean;
+  };
 }
 
 const initialState: AppState = {
@@ -35,6 +41,12 @@ const initialState: AppState = {
     tables: null,
     isLoading: false,
     error: null,
+  },
+  options: {
+    rootKey: 'SOLUTION',
+    useSynonyms: true,
+    useViews: true,
+    cqrs: true,
   }
 };
 
@@ -49,7 +61,8 @@ type Action =
   | { type: 'CLEAR_RESULTS' }
   | { type: 'SET_SCHEMA_LOADING'; payload: boolean }
   | { type: 'SET_SCHEMA_SUCCESS'; payload: TableInfo[] }
-  | { type: 'SET_SCHEMA_ERROR'; payload: string | null };
+  | { type: 'SET_SCHEMA_ERROR'; payload: string | null }
+  | { type: 'SET_REFACTOR_OPTION', payload: { key: keyof AppState['options'], value: any } };
 
 const appReducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
@@ -83,6 +96,14 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return { ...state, schema: { ...state.schema, tables: action.payload, isLoading: false, error: null } };
     case 'SET_SCHEMA_ERROR':
       return { ...state, schema: { ...state.schema, tables: null, isLoading: false, error: action.payload } };
+    case 'SET_REFACTOR_OPTION':
+        return {
+            ...state,
+            options: {
+                ...state.options,
+                [action.payload.key]: action.payload.value,
+            },
+        };
     default:
       return state;
   }

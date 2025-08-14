@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -11,9 +10,15 @@ import {
 import { Input } from '@/components/ui/input';
 import { FolderGit2 } from 'lucide-react';
 import { Label } from '../ui/label';
+import { useAppContext } from '@/contexts/app-context';
 
 export function RepoCard() {
-    const [rootKey, setRootKey] = useState('SOLUTION');
+  const { state, dispatch } = useAppContext();
+  const { rootKey } = state.options;
+
+  const handleRootKeyChange = (value: string) => {
+    dispatch({ type: 'SET_REFACTOR_OPTION', payload: { key: 'rootKey', value } });
+  };
 
   return (
     <Card>
@@ -33,7 +38,7 @@ export function RepoCard() {
                 id="rootKey"
                 placeholder="ej., SOLUTION o FRONT"
                 value={rootKey}
-                onChange={(e) => setRootKey(e.target.value)}
+                onChange={(e) => handleRootKeyChange(e.target.value)}
             />
         </div>
       </CardContent>

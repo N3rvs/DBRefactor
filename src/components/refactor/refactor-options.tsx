@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+
 import {
   Card,
   CardContent,
@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useAppContext } from '@/contexts/app-context';
 
 const InfoTooltip = ({ content }: { content: string }) => (
   <Tooltip>
@@ -32,9 +33,12 @@ const InfoTooltip = ({ content }: { content: string }) => (
 );
 
 export function RefactorOptions() {
-  const [useSynonyms, setUseSynonyms] = useState(true);
-  const [useViews, setUseViews] = useState(true);
-  const [useCqrs, setUseCqrs] = useState(true);
+  const { state, dispatch } = useAppContext();
+  const { useSynonyms, useViews, cqrs } = state.options;
+
+  const handleOptionChange = (option: 'useSynonyms' | 'useViews' | 'cqrs', value: boolean) => {
+    dispatch({ type: 'SET_REFACTOR_OPTION', payload: { key: option, value } });
+  };
 
   return (
     <Card>
@@ -59,7 +63,7 @@ export function RefactorOptions() {
             <Switch
               id="useSynonyms"
               checked={useSynonyms}
-              onCheckedChange={setUseSynonyms}
+              onCheckedChange={(value) => handleOptionChange('useSynonyms', value)}
             />
           </div>
           <Separator />
@@ -73,7 +77,7 @@ export function RefactorOptions() {
             <Switch
               id="useViews"
               checked={useViews}
-              onCheckedChange={setUseViews}
+              onCheckedChange={(value) => handleOptionChange('useViews', value)}
             />
           </div>
           <Separator />
@@ -86,8 +90,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useCqrs"
-              checked={useCqrs}
-              onCheckedChange={setUseCqrs}
+              checked={cqrs}
+              onCheckedChange={(value) => handleOptionChange('cqrs', value)}
             />
           </div>
         </CardContent>
