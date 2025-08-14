@@ -99,13 +99,13 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={table.name} key={table.name}>
-          <AccordionTrigger>
-            <div className="flex items-center justify-between w-full">
+          <AccordionTrigger asChild>
+            <div className="flex items-center justify-between w-full py-4 hover:underline">
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-base">{table.name}</span>
                 <Badge variant="outline">{table.schema}</Badge>
               </div>
-               <div onClick={(e) => e.stopPropagation()} className="mr-4">
+               <div onClick={(e) => e.stopPropagation()} className="mr-4 no-underline">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                      <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -145,7 +145,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 actions={(column) => (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -174,7 +174,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 actions={(index) => (
                    <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
                         <MoreHorizontal className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
