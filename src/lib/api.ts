@@ -21,7 +21,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_DBREFACTOR_API || 'http://localhost
 async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {},
-  timeoutMs: number = 60000
+  timeoutMs: number = 30000
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
