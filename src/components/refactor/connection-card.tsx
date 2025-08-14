@@ -26,7 +26,8 @@ export function ConnectionCard() {
   const { dispatch } = useAppContext();
 
   const handleConnect = async () => {
-    if (!connectionString) {
+    const trimmedConnectionString = connectionString.trim();
+    if (!trimmedConnectionString) {
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -35,7 +36,7 @@ export function ConnectionCard() {
       return;
     }
     try {
-      const connection = await connect(connectionString);
+      const connection = await connect(trimmedConnectionString);
       toast({
         title: 'Éxito',
         description: 'Conectado a la base de datos con éxito.',
