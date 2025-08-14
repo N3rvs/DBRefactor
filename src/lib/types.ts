@@ -16,6 +16,11 @@ export type RenameOp = {
   columnTo?: string | null;
   type?: string | null; // Required for 'add-column' and type-changing 'rename-column'
   note?: string | null;
+  foreignKey?: {
+    isForeignKey: boolean;
+    referencesTable: string;
+    referencesColumn: string;
+  } | null;
 };
 
 // The plan sent to the API should not include the client-side `id`.
