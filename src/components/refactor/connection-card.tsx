@@ -21,7 +21,7 @@ import * as api from '@/lib/api';
 export function ConnectionCard() {
   const [connectionString, setConnectionString] = useState('');
   const { toast } = useToast();
-  const { dbSession, dispatch } = useAppContext();
+  const { state, dispatch, dbSession } = useAppContext();
   const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = dbSession;
 
   const handleConnect = async () => {
@@ -144,8 +144,8 @@ export function ConnectionCard() {
             Desconectar
           </Button>
         ) : (
-          <Button onClick={handleConnect} disabled={isLoading} className="w-full">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleConnect} disabled={isLoading || state.schema.isLoading} className="w-full">
+            {(isLoading || state.schema.isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Conectar
           </Button>
         )}
