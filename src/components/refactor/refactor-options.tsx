@@ -10,6 +10,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Settings2 } from 'lucide-react';
+import { Separator } from '../ui/separator';
 
 export function RefactorOptions() {
   const [useSynonyms, setUseSynonyms] = useState(true);
@@ -27,22 +28,39 @@ export function RefactorOptions() {
           Configure compatibility and cleanup options.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="useSynonyms">Use Synonyms</Label>
-          <Switch
-            id="useSynonyms"
-            checked={useSynonyms}
-            onCheckedChange={setUseSynonyms}
-          />
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="useSynonyms" className="font-semibold">Use Synonyms</Label>
+            <Switch
+              id="useSynonyms"
+              checked={useSynonyms}
+              onCheckedChange={setUseSynonyms}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Creates synonyms for renamed tables/columns for backward compatibility. This allows old code to function without immediate updates.
+          </p>
         </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="useViews">Use Views</Label>
-          <Switch id="useViews" checked={useViews} onCheckedChange={setUseViews} />
+        <Separator />
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <Label htmlFor="useViews" className="font-semibold">Use Views</Label>
+                <Switch id="useViews" checked={useViews} onCheckedChange={setUseViews} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+                Generates views that mimic the original table structure, ensuring that read queries from legacy systems continue to work seamlessly.
+            </p>
         </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="useCqrs">Use CQRS Views</Label>
-          <Switch id="useCqrs" checked={useCqrs} onCheckedChange={setUseCqrs} />
+        <Separator />
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <Label htmlFor="useCqrs" className="font-semibold">Use CQRS Views</Label>
+                <Switch id="useCqrs" checked={useCqrs} onCheckedChange={setUseCqrs} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+                Implements Command Query Responsibility Segregation by creating separate views for read operations, isolating them from write operations.
+            </p>
         </div>
       </CardContent>
     </Card>
