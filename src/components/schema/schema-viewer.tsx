@@ -99,44 +99,42 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={table.name} key={table.name}>
-          <AccordionTrigger asChild>
-             <div className="flex items-center justify-between w-full py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180">
-              <div className="flex items-center gap-4">
-                <span className="font-semibold text-base">{table.name}</span>
-                <Badge variant="outline">{table.schema}</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="no-underline">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenuItem onClick={() => handleRenameTable(table)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Renombrar Tabla
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleAddColumn(table)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Añadir Columna
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar Tabla
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+          <AccordionTrigger>
+             <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-4">
+                    <span className="font-semibold text-base">{table.name}</span>
+                    <Badge variant="outline">{table.schema}</Badge>
                 </div>
-                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
-              </div>
+                <div className="flex items-center gap-2 no-underline">
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => e.stopPropagation()}
+                                >
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => handleRenameTable(table)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Renombrar Tabla
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddColumn(table)}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Añadir Columna
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar Tabla
+                        </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+                </div>
             </div>
           </AccordionTrigger>
           <AccordionContent className="bg-muted/30 p-4 rounded-md">
