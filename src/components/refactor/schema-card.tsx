@@ -4,14 +4,37 @@ import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Database, ServerCrash, Table2 } from 'lucide-react';
+import { useState } from 'react';
+import { AddOpDialog } from './add-op-dialog';
+import type { RenameOp } from '@/lib/types';
 
 
 export function SchemaCard() {
-  const { state, dbSession } = useAppContext();
+  const { state, dbSession, dispatch } = useAppContext();
   const { sessionId } = dbSession;
   const { schema } = state;
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingOp, setEditingOp] = useState<RenameOp | null>(null);
+
+  const handleAddOperation = (op: Omit<RenameOp, 'id' | 'note'>) => {
+    const newOperation: Partial<RenameOp> = {
+      ...op,
+      tableTo: op.scope === 'table' ? '' : undefined,
+      columnFrom: op.scope === 'column' ? op.columnFrom : undefined,
+      columnTo: op.scope.includes('column') ? '' : undefined,
+      type: op.scope === 'add-column' ? '' : undefined,
+    };
+    setEditingOp(newOperation as RenameOp);
+    setIsDialogOpen(true);
+  };
 
   return (
+    <>
+    <AddOpDialog 
+      isOpen={isDialogOpen}
+      setIsOpen={setIsDialogOpen}
+      operation={editingOp}
+    />
     <Card>
       <CardHeader>
         <div className="flex items-center gap-3">
@@ -40,7 +63,7 @@ export function SchemaCard() {
               <p className="text-sm">{schema.error}</p>
           </div>
         ) : schema.tables && schema.tables.length > 0 ? (
-          <SchemaViewer tables={schema.tables} />
+          <SchemaViewer tables={schema.tables} onAddOperation={handleAddOperation} />
         ) : (
           <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
             <Table2 className="mx-auto h-12 w-12 mb-4" />
@@ -49,5 +72,6 @@ export function SchemaCard() {
         )}
       </CardContent>
     </Card>
+    </>
   );
 }
