@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, FKInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
 
@@ -105,34 +105,37 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 <span className="font-semibold text-base">{table.name}</span>
                 <Badge variant="outline">{table.schema}</Badge>
               </div>
-               <div className="mr-4 no-underline">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                     <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenuItem onClick={() => handleRenameTable(table)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Renombrar Tabla
-                    </DropdownMenuItem>
-                     <DropdownMenuItem onClick={() => handleAddColumn(table)}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Añadir Columna
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar Tabla
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div className="flex items-center gap-2">
+                <div className="no-underline">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={() => handleRenameTable(table)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Renombrar Tabla
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleAddColumn(table)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Añadir Columna
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => handleDropTable(table)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar Tabla
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
               </div>
             </div>
           </AccordionTrigger>
