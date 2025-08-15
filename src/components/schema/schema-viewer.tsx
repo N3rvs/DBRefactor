@@ -11,7 +11,6 @@ import { Button } from '../ui/button';
 import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
-import { Separator } from '../ui/separator';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
