@@ -1,70 +1,95 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import * as api from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { connectSession, disconnectSession } from '@/lib/api';
+import type { ConnectResponse } from '@/lib/types';
 
-export interface DbSessionState {
-  sessionId: string | null;
-  expiresAtUtc: string | null;
+const LS_KEY = 'dbrefactor.session';
+
+export type DbSession = {
+  sessionId?: string;       
+  expiresAtUtc?: string;    
   isLoading: boolean;
   error: string | null;
-}
+ 
+  connect: (connectionString: string) => Promise<ConnectResponse>;
 
-export interface DbSession extends DbSessionState {
-  connect: (connectionString: string, ttlSeconds?: number) => Promise<api.ConnectResponse>;
   disconnect: () => Promise<void>;
-  clearError: () => void;
-}
+};
 
+export function useDbSession(): DbSession {
+  const [sessionId, setSessionId] = useState<string | undefined>();
+  const [expiresAtUtc, setExpiresAtUtc] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export const useDbSession = (): DbSession => {
-  const [session, setSession] = useState<DbSessionState>({
-    sessionId: null,
-    expiresAtUtc: null,
-    isLoading: false,
-    error: null,
-  });
-
-  const connect = useCallback(async (connectionString: string, ttlSeconds?: number) => {
-    setSession((s) => ({ ...s, isLoading: true, error: null }));
+  // Restaura sesión almacenada
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      const response = await api.connectSession({ ConnectionString: connectionString, TtlSeconds: ttlSeconds });
-      setSession({
-        sessionId: response.SessionId,
-        expiresAtUtc: response.ExpiresAtUtc,
-        isLoading: false,
-        error: null,
-      });
-      return response;
-    } catch (err) {
-      const error = err instanceof Error ? err.message : 'Failed to connect';
-      setSession({ sessionId: null, expiresAtUtc: null, isLoading: false, error });
-      throw err;
+      const raw = localStorage.getItem(LS_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as { sessionId?: string; expiresAtUtc?: string };
+        setSessionId(saved.sessionId);
+        setExpiresAtUtc(saved.expiresAtUtc);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  // Persiste cambios
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (sessionId) {
+      localStorage.setItem(LS_KEY, JSON.stringify({ sessionId, expiresAtUtc }));
+    } else {
+      localStorage.removeItem(LS_KEY);
+    }
+  }, [sessionId, expiresAtUtc]);
+
+  const connect = useCallback(async (connectionString: string): Promise<ConnectResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // ⚠️ El backend espera PascalCase en el body
+      const res = await connectSession({ ConnectionString: connectionString });
+
+      // 🔸 Normaliza: acepta camelCase o PascalCase y devuelve siempre PascalCase
+      const SessionId = (res as any).SessionId ?? (res as any).sessionId;
+      const ExpiresAtUtc = (res as any).ExpiresAtUtc ?? (res as any).expiresAtUtc;
+
+      if (!SessionId) throw new Error('No se obtuvo SessionId de la API.');
+
+      // Guarda en estado interno (camelCase)
+      setSessionId(SessionId);
+      setExpiresAtUtc(ExpiresAtUtc);
+
+      // Devuelve en el shape que espera tu UI (PascalCase)
+      return { SessionId, ExpiresAtUtc };
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo conectar.');
+      throw e;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
   const disconnect = useCallback(async () => {
-    if (!session.sessionId) return;
-    setSession((s) => ({ ...s, isLoading: true, error: null }));
+    if (!sessionId) return;
+    setIsLoading(true);
+    setError(null);
     try {
-      await api.disconnectSession({ SessionId: session.sessionId });
-      setSession({ sessionId: null, expiresAtUtc: null, isLoading: false, error: null });
-    } catch (err) {
-       const error = err instanceof Error ? err.message : 'Failed to disconnect';
-      // Still clear session on client even if disconnect fails
-      setSession({ sessionId: null, expiresAtUtc: null, isLoading: false, error });
-      throw err;
+      await disconnectSession({ SessionId: sessionId }); // PascalCase hacia el backend
+      setSessionId(undefined);
+      setExpiresAtUtc(undefined);
+    } catch (e: any) {
+      setError(e?.message ?? 'No se pudo desconectar.');
+      throw e;
+    } finally {
+      setIsLoading(false);
     }
-  }, [session.sessionId]);
+  }, [sessionId]);
 
-  const clearError = useCallback(() => {
-    setSession(s => ({ ...s, error: null }));
-  }, []);
-
-  return {
-    ...session,
-    connect,
-    disconnect,
-    clearError,
-  };
-};
+  return { sessionId, expiresAtUtc, isLoading, error, connect, disconnect };
+}

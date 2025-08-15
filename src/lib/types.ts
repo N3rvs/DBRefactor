@@ -1,6 +1,6 @@
 // types.ts
 
-// Conexiones
+// ---- Conexiones ----
 export type ConnectionProps = {
   SessionId?: string;
   ConnectionKey?: string;
@@ -8,10 +8,15 @@ export type ConnectionProps = {
 };
 
 // ---- Schemas OpenAPI ----
-
 export type RenameOp = {
-  id: string; // id es solo para el cliente
-  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  id: string; // id solo en cliente
+  Scope:
+    | 'table'
+    | 'column'
+    | 'add-column'
+    | 'drop-column'
+    | 'drop-table'
+    | 'drop-index'; // usamos ColumnFrom para el nombre del índice
   TableFrom: string;
   TableTo?: string | null;
   ColumnFrom?: string | null;
@@ -38,116 +43,67 @@ export type GenerateOptions = {
 
 export type RefactorPlan = { Renames: RenameItemDto[] };
 
-export interface ColumnInfo {
-  Name: string;
-  SqlType: string;
-  IsNullable: boolean;
-}
+// ---- Esquema ----
+export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
+export interface ForeignKeyInfo { Name: string; FromTable: string; FromColumn: string; ToTable: string; ToColumn: string; }
+export interface IndexInfo { Name: string; IsUnique: boolean; Columns: string[]; }
+export interface TableInfo { Schema: string; Name: string; Columns: ColumnInfo[]; ForeignKeys: ForeignKeyInfo[]; Indexes: IndexInfo[]; }
+export type DbSchema = { Tables: TableInfo[]; };
 
-export interface ForeignKeyInfo {
-  Name: string;
-  FromTable: string;
-  FromColumn: string;
-  ToTable: string;
-  ToColumn: string;
-}
-
-export interface IndexInfo {
-  Name: string;
-  IsUnique: boolean;
-  Columns: string[];
-}
-
-export interface TableInfo {
-  Schema: string;
-  Name: string;
-  Columns: ColumnInfo[];
-  ForeignKeys: ForeignKeyInfo[];
-  Indexes: IndexInfo[];
-}
-
-export type DbSchema = {
-  Tables: TableInfo[];
-};
-
+// ---- SQL / CodeFix ----
 export type SqlBundle = {
   RenameSql?: string;
   CompatSql?: string;
   CleanupSql?: string;
 };
 
-export type ChangedFile = {
-  Path: string;
-  Changed: boolean;
-};
+export type ChangedFile = { Path: string; Changed: boolean; };
+export type CodeFixRunResult = { FilesScanned: number; FilesChanged: number; Changes: ChangedFile[]; };
 
-export type CodeFixRunResult = {
-  FilesScanned: number;
-  FilesChanged: number;
-  Changes: ChangedFile[];
-};
+// ---- Plan (/plan) ----
+export type PlanRequest = GenerateOptions & { Renames: RenameItemDto[] };
+export type PlanResponse = { Sql: SqlBundle; Report: unknown }; // PlanResponseDto en el backend
 
-// ---- Payloads de Request ----
-
-export type ConnectRequest = {
-  ConnectionString: string;
-  TtlSeconds?: number;
-};
-
-export type DisconnectRequest = {
-  SessionId: string;
-};
-
+// ---- Requests ----
+export type ConnectRequest = { ConnectionString: string; TtlSeconds?: number; };
+export type DisconnectRequest = { SessionId: string; };
 export type AnalyzeSchemaRequest = ConnectionProps;
 
+// /refactor/run necesita el JSON completo del plan de /plan
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: RefactorPlan;
+  Plan: PlanResponse;
   Apply: boolean;
   RootKey?: string;
 };
 
+// /apply/cleanup: acepta misma resolución de conexión que el resto
 export type CleanupRequest = ConnectionProps & GenerateOptions & {
   Renames: RenameItemDto[];
 };
 
+// Puede aceptar el plan completo de /plan o solo {Renames} según implementación
 export type CodeFixRequest = {
   RootKey: string;
   Apply: boolean;
-  Plan: RefactorPlan;
+  Plan: PlanResponse | RefactorPlan;
   IncludeGlobs?: string[];
   ExcludeGlobs?: string[];
 };
 
-// ---- Payloads de Response ----
-
-export type ConnectResponse = {
-  SessionId: string;
-  ExpiresAtUtc: string;
-};
-
+// ---- Responses ----
+export type ConnectResponse = { SessionId: string; ExpiresAtUtc: string; };
 export type AnalyzeSchemaResponse = DbSchema;
 
-export type RefactorResponse = {
-  ok: boolean;
-  apply: boolean;
-  sql: SqlBundle;
-  codefix: CodeFixRunResult;
-  dbLog?: string[];
-};
+// El shape exacto de /refactor/run puede variar -> lo dejamos laxo
+export type RefactorResponse = Record<string, unknown>;
 
 export type CleanupResponse = {
-  ok: boolean;
-  log: string[];
-  sql: SqlBundle;
+  ok?: boolean;
+  log?: string[];
+  sql?: SqlBundle;
 };
 
-export type CodeFixResponse = CodeFixRunResult & {
-  ok: boolean;
-};
+// /codefix/run devuelve CodeFixRunResult (sin "ok")
+export type CodeFixResponse = CodeFixRunResult;
 
-export type ApiError = {
-  message: string;
-  error?: string;
-  title?: string;
-  detail?: string;
-};
+export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
