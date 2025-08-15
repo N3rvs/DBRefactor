@@ -1,60 +1,33 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { CheckCircle, Database, Loader2, XCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/app-context';
-import * as api from '@/lib/api';
-
 
 export function ConnectionCard() {
   const [connectionString, setConnectionString] = useState('');
   const { toast } = useToast();
-  const { state, dispatch, dbSession } = useAppContext();
+  const { state, dispatch, dbSession, refreshSchema } = useAppContext();
   const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = dbSession;
 
   const handleConnect = async () => {
-    const trimmedConnectionString = connectionString.trim();
-    if (!trimmedConnectionString) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'La cadena de conexión no puede estar vacía.',
-      });
+    const trimmed = connectionString.trim();
+    if (!trimmed) {
+      toast({ variant: 'destructive', title: 'Error', description: 'La cadena de conexión no puede estar vacía.' });
       return;
     }
     try {
-      const connection = await connect(trimmedConnectionString);
-      toast({
-        title: 'Éxito',
-        description: 'Conectado a la base de datos con éxito.',
-      });
+      const r = await connect(trimmed);     // crea la sesión (devuelve PascalCase)
       setConnectionString('');
-
-      if(connection.SessionId) {
-        // Automatically analyze schema on successful connection
-        dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
-        try {
-          const response = await api.analyzeSchemaBySession({ SessionId: connection.SessionId });
-          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: response.Tables });
-        } catch (err) {
-          const errorMsg = err instanceof Error ? err.message : 'Error al analizar el esquema.';
-          dispatch({ type: 'SET_SCHEMA_ERROR', payload: errorMsg });
-          toast({ variant: 'destructive', title: 'Análisis Automático Fallido', description: errorMsg });
-        }
-      }
-
+      await refreshSchema(r.SessionId);     // analiza pasando el SID recién creado
+      toast({ title: 'Éxito', description: 'Conectado a la base de datos con éxito.' });
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -68,11 +41,8 @@ export function ConnectionCard() {
     if (!sessionId) return;
     try {
       await disconnect();
-      toast({
-        title: 'Éxito',
-        description: 'Desconectado de la base de datos.',
-      });
-      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] }); // Clear schema on disconnect
+      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] }); // limpia esquema
+      toast({ title: 'Éxito', description: 'Desconectado de la base de datos.' });
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -89,10 +59,9 @@ export function ConnectionCard() {
           <Database className="w-6 h-6 text-primary" />
           <CardTitle>Conexión de Base de Datos</CardTitle>
         </div>
-        <CardDescription>
-          Conéctese a su base de datos para comenzar a refactorizar.
-        </CardDescription>
+        <CardDescription>Conéctese a su base de datos para comenzar a refactorizar.</CardDescription>
       </CardHeader>
+
       <CardContent>
         {sessionId ? (
           <div className="space-y-4">
@@ -105,7 +74,7 @@ export function ConnectionCard() {
                 </p>
               </div>
             </div>
-             {expiresAtUtc && (
+            {expiresAtUtc && (
               <p className="text-sm text-muted-foreground">
                 La sesión expira {formatDistanceToNow(new Date(expiresAtUtc), { addSuffix: true, locale: es })}.
               </p>
@@ -123,23 +92,19 @@ export function ConnectionCard() {
               inputMode="none"
               aria-label="Cadena de Conexión de la Base de Datos"
             />
-             {error && (
+            {error && (
               <div className="flex items-center gap-2 text-destructive text-sm">
-                <XCircle className="w-4 h-4"/>
+                <XCircle className="w-4 h-4" />
                 <span>{error}</span>
               </div>
             )}
           </div>
         )}
       </CardContent>
+
       <CardFooter>
         {sessionId ? (
-          <Button
-            onClick={handleDisconnect}
-            disabled={isLoading}
-            variant="destructive"
-            className="w-full"
-          >
+          <Button onClick={handleDisconnect} disabled={isLoading} variant="destructive" className="w-full">
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Desconectar
           </Button>

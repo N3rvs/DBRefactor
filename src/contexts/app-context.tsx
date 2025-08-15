@@ -1,9 +1,11 @@
 'use client';
 
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import type { RenameOp, CodeFixRunResult, SqlBundle, TableInfo, GenerateOptions } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
+import * as api from '@/lib/api';
+import { normalizeDbSchema } from '@/lib/normalize-db-schema';
 
 
 interface AppState {
@@ -111,18 +113,39 @@ const appReducer = (state: AppState, action: Action): AppState => {
   }
 };
 
-const AppContext = createContext<{
+interface AppContextType {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   dbSession: DbSession;
-} | undefined>(undefined);
+  refreshSchema: (sessionId?: string | null) => Promise<void>;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const dbSession = useDbSession();
 
+  const refreshSchema = useCallback(async (sessionId?: string | null) => {
+    const sid = sessionId ?? dbSession.sessionId;
+    if (!sid) return;
+    
+    dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+    try {
+      const response = await api.analyzeSchemaBySession({ SessionId: sid });
+      const normalizedTables = normalizeDbSchema(response);
+      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: normalizedTables });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Error al analizar el esquema.';
+      dispatch({ type: 'SET_SCHEMA_ERROR', payload: errorMsg });
+      throw err; // Re-throw para que el llamador pueda manejarlo
+    }
+  }, [dbSession.sessionId]);
+
+
   return (
-    <AppContext.Provider value={{ state, dispatch, dbSession }}>
+    <AppContext.Provider value={{ state, dispatch, dbSession, refreshSchema }}>
       {children}
     </AppContext.Provider>
   );
