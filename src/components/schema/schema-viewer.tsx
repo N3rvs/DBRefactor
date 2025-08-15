@@ -8,9 +8,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
+import { Separator } from '../ui/separator';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
@@ -23,38 +24,45 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
   data, columns, caption, actions,
 }: {
   data: T[] | undefined;
-  columns: { key: string; header: string }[];
+  columns: { key: string; header: string; className?: string }[];
   caption: string;
   actions?: (item: T) => React.ReactNode;
 }) => {
   if (!data || data.length === 0) {
-    return <p className="text-sm text-muted-foreground mt-2">{caption} no encontrados.</p>;
+    return (
+      <div className="my-4">
+        <h4 className="font-semibold text-base mb-2">{caption}</h4>
+        <p className="text-sm text-muted-foreground mt-2 px-2">No se encontraron {caption.toLowerCase()}.</p>
+      </div>
+    )
   }
   return (
     <div className="my-4">
-      <h4 className="font-semibold text-sm mb-2">{caption}</h4>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            {columns.map(col => <TableHead key={col.key}>{col.header}</TableHead>)}
-            {actions && <TableHead className="w-[50px]" />}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {data.map((item) => (
-            <TableRow key={item.Name}>
-              {columns.map(col => (
-                <TableCell key={col.key} className="font-mono text-xs">
-                  {Array.isArray(item[col.key]) ? (item[col.key] as any[]).join(', ')
-                    : typeof item[col.key] === 'boolean' ? (item[col.key] ? 'Sí' : 'No')
-                    : item[col.key]}
-                </TableCell>
-              ))}
-              {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
+      <h4 className="font-semibold text-base mb-2">{caption}</h4>
+      <div className="border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map(col => <TableHead key={col.key} className={col.className}>{col.header}</TableHead>)}
+              {actions && <TableHead className="w-[50px] text-right" />}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {data.map((item) => (
+              <TableRow key={item.Name}>
+                {columns.map(col => (
+                  <TableCell key={col.key} className="font-mono text-xs">
+                    {Array.isArray(item[col.key]) ? (item[col.key] as any[]).join(', ')
+                      : typeof item[col.key] === 'boolean' ? (item[col.key] ? 'Sí' : 'No')
+                      : item[col.key]}
+                  </TableCell>
+                ))}
+                {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
@@ -90,55 +98,61 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={fq(table)} key={fq(table)}>
-          <AccordionTrigger>
-            <div className="flex items-center gap-4">
-              <span className="font-semibold text-base">{fq(table)}</span>
-              <Badge variant="outline">{table.Schema}</Badge>
-            </div>
-            <div className="flex items-center gap-2 no-underline">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenuItem onClick={() => handleRenameTable(table)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Renombrar Tabla
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddColumn(table)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Añadir Columna
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => handleDropTable(table)}
-                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar Tabla
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+          <AccordionTrigger asChild>
+              <div className="flex w-full items-center justify-between py-4 font-medium hover:underline group">
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-base">{fq(table)}</span>
+                    <Badge variant="outline">{table.Schema}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 no-underline">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => handleRenameTable(table)}>
+                          <Pencil className="mr-2 h-4 w-4" />
+                          Renombrar Tabla
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleAddColumn(table)}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Añadir Columna
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => handleDropTable(table)}
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar Tabla
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                  </div>
+              </div>
           </AccordionTrigger>
 
-          <AccordionContent className="bg-muted/30 p-4 rounded-md">
-            <div className="grid grid-cols-3 gap-4 text-sm mb-4">
-              <div><span className="font-semibold">Columnas:</span> {table.Columns.length}</div>
-              <div><span className="font-semibold">Claves Foráneas:</span> {table.ForeignKeys.length}</div>
-              <div><span className="font-semibold">Índices:</span> {table.Indexes.length}</div>
+          <AccordionContent className="bg-muted/20 p-4 rounded-md border">
+            <div className="grid grid-cols-3 gap-4 text-sm mb-4 border-b pb-4">
+              <div><span className="font-semibold text-muted-foreground">Columnas:</span> {table.Columns.length}</div>
+              <div><span className="font-semibold text-muted-foreground">Claves Foráneas:</span> {table.ForeignKeys.length}</div>
+              <div><span className="font-semibold text-muted-foreground">Índices:</span> {table.Indexes.length}</div>
             </div>
 
             <DetailTable<ColumnInfo>
               data={table.Columns}
-              columns={[{ key: 'Name', header: 'Nombre' }, { key: 'SqlType', header: 'Tipo' }]}
+              columns={[
+                { key: 'Name', header: 'Nombre', className: 'w-[40%]' }, 
+                { key: 'SqlType', header: 'Tipo', className: 'w-[40%]' }
+              ]}
               caption="Columnas"
               actions={(column) => (
                 <DropdownMenu>
@@ -183,7 +197,6 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                 { key: 'Columns', header: 'Columnas' },
               ]}
               caption="Índices"
-              // Acciones sobre índices deshabilitadas (drop-index no soportado en backend)
               actions={undefined}
             />
           </AccordionContent>
