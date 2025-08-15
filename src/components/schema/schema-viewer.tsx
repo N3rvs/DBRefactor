@@ -8,7 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
 import { Button } from '../ui/button';
-import { MoreHorizontal, Pencil, Plus, Trash2, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
 
@@ -93,50 +93,57 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: fq(table), ColumnFrom: column.Name });
   };
 
+  // helpers para evitar que el click del menú dispare el toggle del acordeón
+  const stopToggle = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    e.nativeEvent?.preventDefault?.();
+  };
+
   return (
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
-        <AccordionItem value={fq(table)} key={fq(table)}>
-          <AccordionTrigger asChild>
-              <div className="flex w-full items-center justify-between py-4 font-medium hover:underline group">
-                  <div className="flex items-center gap-4">
-                    <span className="font-semibold text-base">{fq(table)}</span>
-                    <Badge variant="outline">{table.Schema}</Badge>
-                  </div>
-                  <div className="flex items-center gap-2 no-underline">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onClick={() => handleRenameTable(table)}>
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Renombrar Tabla
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleAddColumn(table)}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Añadir Columna
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDropTable(table)}
-                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar Tabla
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                  </div>
+        <AccordionItem value={fq(table)} key={fq(table)} className="border-b">
+          <AccordionTrigger className="flex w-full items-center justify-between py-4 font-medium hover:underline [&[data-state=open]>svg]:rotate-180">
+            <div className="flex w-full items-center justify-between gap-2">
+              <div className="flex items-center gap-4">
+                <span className="font-semibold text-base">{fq(table)}</span>
+                <Badge variant="outline">{table.Schema}</Badge>
               </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={stopToggle}
+                    onPointerDown={stopToggle}
+                    onKeyDown={stopToggle}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted no-underline"
+                    aria-label="Acciones de tabla"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={() => handleRenameTable(table)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Renombrar Tabla
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddColumn(table)}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Añadir Columna
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleDropTable(table)}
+                    className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar Tabla
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </AccordionTrigger>
 
           <AccordionContent className="bg-muted/20 p-4 rounded-md border">
@@ -149,16 +156,23 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
             <DetailTable<ColumnInfo>
               data={table.Columns}
               columns={[
-                { key: 'Name', header: 'Nombre', className: 'w-[40%]' }, 
+                { key: 'Name', header: 'Nombre', className: 'w-[40%]' },
                 { key: 'SqlType', header: 'Tipo', className: 'w-[40%]' }
               ]}
               caption="Columnas"
               actions={(column) => (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+                      aria-label="Acciones de columna"
+                    >
                       <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    </span>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenuItem onClick={() => handleRenameColumn(table, column)}>
