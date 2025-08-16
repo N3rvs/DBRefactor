@@ -45,6 +45,17 @@ const sqlDataTypes = [
   'Personalizado'
 ];
 
+// Helper para limpiar el prefijo 'dbo.'
+const stripSchemaPrefix = (tableName: string | undefined | null): string | undefined | null => {
+  if (!tableName) return tableName;
+  const prefix = 'dbo.';
+  if (tableName.toLowerCase().startsWith(prefix)) {
+    return tableName.substring(prefix.length);
+  }
+  return tableName;
+};
+
+
 export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) {
   const { dispatch, state: { schema } } = useAppContext();
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>();
@@ -89,12 +100,19 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return;
     }
       
+    // Limpia el prefijo del esquema antes de enviar
+    const cleanedData = {
+      ...data,
+      TableFrom: stripSchemaPrefix(data.TableFrom) || '',
+      TableTo: stripSchemaPrefix(data.TableTo),
+    };
+
     if (operation && operation.id) {
       // Es una actualización
-      dispatch({ type: 'UPDATE_OPERATION', payload: { ...data, id: operation.id } });
+      dispatch({ type: 'UPDATE_OPERATION', payload: { ...cleanedData, id: operation.id } });
     } else {
       // Es una nueva operación
-      dispatch({ type: 'ADD_OPERATION', payload: data as RenameOp });
+      dispatch({ type: 'ADD_OPERATION', payload: cleanedData as RenameOp });
     }
     setIsOpen(false);
   };
@@ -106,12 +124,12 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla Original</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands" />
               {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="TableTo">Tabla Nueva</Label>
-              <Input id="TableTo" {...register('TableTo', { required: true })} />
+              <Input id="TableTo" {...register('TableTo', { required: true })} placeholder="Ej: NewBrands"/>
               {errors.TableTo && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
           </>
@@ -121,7 +139,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands"/>
               {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -145,7 +163,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} />
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands"/>
                {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">

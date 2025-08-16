@@ -17,6 +17,7 @@ interface SchemaViewerProps {
 }
 
 const fq = (t: TableInfo) => `${t.Schema}.${t.Name}`;
+const justTable = (t: TableInfo) => t.Name; // Helper para obtener solo el nombre de la tabla
 
 const DetailTable = <T extends { Name: string; [key: string]: any }>({
   data, columns, caption, actions,
@@ -68,23 +69,23 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
 
   const handleRenameTable = (table: TableInfo) => {
-    onAddOperation({ Scope: 'table', TableFrom: fq(table), TableTo: '' });
+    onAddOperation({ Scope: 'table', TableFrom: justTable(table), TableTo: '' });
   };
 
   const handleDropTable = (table: TableInfo) => {
-    handleAddSimpleOperation({ Scope: 'drop-table', TableFrom: fq(table) });
+    handleAddSimpleOperation({ Scope: 'drop-table', TableFrom: justTable(table) });
   };
 
   const handleAddColumn = (table: TableInfo) => {
-    onAddOperation({ Scope: 'add-column', TableFrom: fq(table), ColumnTo: '', Type: '' });
+    onAddOperation({ Scope: 'add-column', TableFrom: justTable(table), ColumnTo: '', Type: '' });
   };
 
   const handleRenameColumn = (table: TableInfo, column: ColumnInfo) => {
-    onAddOperation({ Scope: 'column', TableFrom: fq(table), ColumnFrom: column.Name, ColumnTo: '' });
+    onAddOperation({ Scope: 'column', TableFrom: justTable(table), ColumnFrom: column.Name, ColumnTo: '' });
   };
 
   const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
-    handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: fq(table), ColumnFrom: column.Name });
+    handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: justTable(table), ColumnFrom: column.Name });
   };
 
   // helpers para evitar que el click del menú dispare el toggle del acordeón
