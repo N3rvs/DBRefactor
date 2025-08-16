@@ -126,7 +126,7 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Plan: { renames: renamesDto },
+          Plan: { Renames: renamesDto }, // PascalCase
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
@@ -142,12 +142,12 @@ export function PlanBuilder() {
       } else if (actionType === 'cleanup') {
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: "", // Requerido por el DTO para validación
+          ConnectionString: "", 
           Renames: renamesDto,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, 
+          AllowDestructive: !!AllowDestructive,
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -352,8 +352,8 @@ export function PlanBuilder() {
             <Button 
                 onClick={() => handleAction('apply')}
                 disabled={state.results.isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.AllowDestructive)}
-                variant={hasDestructiveOps ? "destructive" : "default"}
-                title={hasDestructiveOps ? "Aplica el plan, incluyendo operaciones de borrado. Requiere 'Permitir Eliminaciones' habilitado." : "Aplica el plan de refactorización."}
+                variant={hasDestructiveOps && state.options.AllowDestructive ? "destructive" : "default"}
+                title={hasDestructiveOps && !state.options.AllowDestructive ? "Para aplicar un plan con borrados, debe habilitar 'Permitir Eliminaciones' en las opciones." : "Aplica el plan de refactorización."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <ClipboardCheck className="mr-2 h-4 w-4"/>

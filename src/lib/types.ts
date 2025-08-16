@@ -41,7 +41,7 @@ export type GenerateOptions = {
   AllowDestructive?: boolean;
 };
 
-export type RefactorPlan = { renames: RenameItemDto[] };
+export type RefactorPlan = { Renames: RenameItemDto[] }; // PascalCase
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -75,7 +75,7 @@ export type AnalyzeSchemaRequest = ConnectionProps;
 
 // /refactor/run necesita el JSON del plan
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: { renames: RenameItemDto[] }; 
+  Plan: RefactorPlan; 
   Apply: boolean;
   RootKey?: string;
 };
@@ -89,7 +89,7 @@ export type CleanupRequest = ConnectionProps & GenerateOptions & {
 export type CodeFixRequest = {
   RootKey: string;
   Apply: boolean;
-  Plan: PlanResponse | RefactorPlan;
+  Plan: PlanResponse | { Renames: RenameItemDto[] }; // Acepta el plan con PascalCase
   IncludeGlobs?: string[];
   ExcludeGlobs?: string[];
 };
