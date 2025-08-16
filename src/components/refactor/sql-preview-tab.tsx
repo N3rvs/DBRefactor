@@ -14,6 +14,11 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
 
   if (!sql) return null;
 
+  // El backend devuelve las claves en PascalCase, nos aseguramos de leerlas así.
+  const renameSql = (sql as any).renameSql || sql.RenameSql;
+  const compatSql = (sql as any).compatSql || sql.CompatSql;
+  const cleanupSql = (sql as any).cleanupSql || sql.CleanupSql;
+
   const handleCopy = (text: string | undefined, name: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
@@ -47,18 +52,18 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
   return (
     <Tabs defaultValue="rename" className="w-full">
       <TabsList>
-        <TabsTrigger value="rename" disabled={!sql.RenameSql}>Renombrar</TabsTrigger>
-        <TabsTrigger value="compat" disabled={!sql.CompatSql}>Compatibilidad</TabsTrigger>
-        <TabsTrigger value="cleanup" disabled={!sql.CleanupSql}>Limpieza</TabsTrigger>
+        <TabsTrigger value="rename" disabled={!renameSql}>Renombrar</TabsTrigger>
+        <TabsTrigger value="compat" disabled={!compatSql}>Compatibilidad</TabsTrigger>
+        <TabsTrigger value="cleanup" disabled={!cleanupSql}>Limpieza</TabsTrigger>
       </TabsList>
       <TabsContent value="rename">
-        <CodeBlock content={sql.RenameSql} title="Renombrar" />
+        <CodeBlock content={renameSql} title="Renombrar" />
       </TabsContent>
       <TabsContent value="compat">
-        <CodeBlock content={sql.CompatSql} title="Compatibilidad" />
+        <CodeBlock content={compatSql} title="Compatibilidad" />
       </TabsContent>
       <TabsContent value="cleanup">
-        <CodeBlock content={sql.CleanupSql} title="Limpieza" />
+        <CodeBlock content={cleanupSql} title="Limpieza" />
       </TabsContent>
     </Tabs>
   );
