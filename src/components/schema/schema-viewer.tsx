@@ -7,10 +7,10 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
-import { Button } from '../ui/button';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
+import { Button } from '@/components/ui/button';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
@@ -93,38 +93,30 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: fq(table), ColumnFrom: column.Name });
   };
 
-  // helpers para evitar que el click del menú dispare el toggle del acordeón
-  const stopToggle = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-    e.nativeEvent?.preventDefault?.();
-  };
+  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={fq(table)} key={fq(table)} className="border-b">
-          <AccordionTrigger className="flex w-full items-center justify-between py-4 font-medium hover:underline [&[data-state=open]>svg]:rotate-180">
+          <AccordionTrigger>
             <div className="flex w-full items-center justify-between gap-2">
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-base">{fq(table)}</span>
                 <Badge variant="outline">{table.Schema}</Badge>
               </div>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={stopToggle}
-                    onPointerDown={stopToggle}
-                    onKeyDown={stopToggle}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted no-underline"
-                    aria-label="Acciones de tabla"
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={stopPropagation}
                   >
                     <MoreHorizontal className="h-4 w-4" />
-                  </span>
+                  </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuContent align="end" onClick={stopPropagation}>
                   <DropdownMenuItem onClick={() => handleRenameTable(table)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Renombrar Tabla
@@ -163,18 +155,16 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
               actions={(column) => (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-                      aria-label="Acciones de columna"
+                     <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={stopPropagation}
                     >
                       <MoreHorizontal className="h-4 w-4" />
-                    </span>
+                    </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuContent align="end" onClick={stopPropagation}>
                     <DropdownMenuItem onClick={() => handleRenameColumn(table, column)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Renombrar Columna
