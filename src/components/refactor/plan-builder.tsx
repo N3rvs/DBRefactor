@@ -46,8 +46,8 @@ import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 // Helper para limpiar el prefijo 'dbo.'
-const stripSchemaPrefix = (tableName: string | undefined | null): string | undefined | null => {
-  if (!tableName) return tableName;
+const stripSchemaPrefix = (tableName: string | undefined | null): string => {
+  if (!tableName) return '';
   const prefix = 'dbo.';
   if (tableName.toLowerCase().startsWith(prefix)) {
     return tableName.substring(prefix.length);
@@ -55,23 +55,27 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string | undef
   return tableName;
 };
 
+
 // Helper para transformar a camelCase como espera el backend
-const toCamelCaseRename = (op: RenameItemDto): Record<string, any> => ({
-    scope: op.Scope,
-    tableFrom: stripSchemaPrefix(op.TableFrom),
-    tableTo: stripSchemaPrefix(op.TableTo),
-    columnFrom: op.ColumnFrom,
-    columnTo: op.ColumnTo,
-    type: op.Type,
-    area: op.Area,
-    note: op.Note,
-    default: op.Default,
-    nullable: op.Nullable,
-    length: op.Length,
-    precision: op.Precision,
-    scale: op.Scale,
-    computed: op.Computed,
-});
+const toCamelCaseRename = (op: RenameOp): Record<string, any> => {
+  // Quitamos el id del cliente y convertimos las claves a camelCase
+  const { id, ...rest } = op;
+  const dto: Record<string, any> = {};
+  for (const key in rest) {
+      if (Object.prototype.hasOwnProperty.call(rest, key)) {
+          const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+          // @ts-ignore
+          const value = rest[key];
+
+          if (camelKey === 'tableFrom' || camelKey === 'tableTo') {
+              dto[camelKey] = stripSchemaPrefix(value);
+          } else {
+              dto[camelKey] = value;
+          }
+      }
+  }
+  return dto;
+};
 
 
 export function PlanBuilder() {
@@ -111,13 +115,13 @@ export function PlanBuilder() {
     try {
       const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
-      // Limpia DTOs y quita el id del cliente ANTES de enviarlos.
-      const camelCaseRenames = state.plan.map(({ id, ...rest }) => toCamelCaseRename(rest));
+      // Unifica la transformación del plan aquí para todas las acciones
+      const camelCaseRenames = state.plan.map(toCamelCaseRename);
 
       if (actionType === 'cleanup') {
         const response = await api.runCleanup({
           SessionId: sessionId,
-          Renames: camelCaseRenames,
+          Renames: camelCaseRenames, // El backend espera 'Renames' para cleanup
           UseSynonyms,
           UseViews,
           Cqrs,
@@ -133,10 +137,11 @@ export function PlanBuilder() {
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
       } else {
+        // Para 'preview' y 'apply'
         const isApply = actionType === 'apply';
         
         const runPlan = {
-          renames: camelCaseRenames,
+          renames: camelCaseRenames, // El backend espera 'renames' (minúscula) para /refactor/run
         };
 
         const response = await api.runRefactor({
@@ -364,3 +369,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    
