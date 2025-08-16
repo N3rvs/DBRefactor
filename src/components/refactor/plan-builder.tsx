@@ -105,20 +105,20 @@ export function PlanBuilder() {
         const isApply = actionType === 'apply';
         
         // Construye el plan con `renames` en minúsculas, como espera el backend.
-        // Las propiedades internas de cada objeto se mantienen en PascalCase.
         const runPlan = {
           renames: plainRenames
         };
 
         const response = await api.runRefactor({
           SessionId: sessionId,
-          Plan: runPlan, 
           Apply: isApply,
           RootKey: rootKey,
-          UseSynonyms,
-          UseViews,
-          Cqrs,
+          UseSynonyms: !!UseSynonyms,
+          UseViews: !!UseViews,
+          Cqrs: !!Cqrs,
+          Plan: runPlan,
         });
+
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -333,3 +333,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    
