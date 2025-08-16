@@ -126,7 +126,7 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Plan: { renames: renamesDto }, // backend espera 'renames' en camelCase
+          Plan: { Renames: renamesDto }, // C# backend expects PascalCase
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
