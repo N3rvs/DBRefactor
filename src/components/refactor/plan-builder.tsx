@@ -142,12 +142,12 @@ export function PlanBuilder() {
       } else if (actionType === 'cleanup') {
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: "", // Requerido por el DTO
+          ConnectionString: "", // Requerido por el DTO para validación
           Renames: renamesDto,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, // Pasamos la opción aquí también
+          AllowDestructive: !!AllowDestructive, 
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -360,10 +360,10 @@ export function PlanBuilder() {
                 Aplicar Plan
             </Button>
             <Button 
-                variant={hasDestructiveOps ? "destructive" : "outline"} 
+                variant={"outline"} 
                 onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.AllowDestructive)}
-                title={"Elimina objetos de compatibilidad (sinónimos, vistas) y/o ejecuta operaciones destructivas."}
+                disabled={state.results.isLoading || state.plan.length === 0}
+                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
