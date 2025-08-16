@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { RenameOp } from '@/lib/types';
+import type { RenameOp, RenameItemDto } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -45,31 +45,23 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
-// Helper para limpiar el prefijo 'dbo.'
 const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   if (!tableName) return '';
-  const prefix = 'dbo.';
-  if (tableName.toLowerCase().startsWith(prefix)) {
-    return tableName.substring(prefix.length);
-  }
-  return tableName;
+  return tableName.toLowerCase().startsWith('dbo.') ? tableName.substring(4) : tableName;
 };
 
-// Helper para transformar a camelCase como espera el backend
-const toCamelCaseOperation = (op: RenameOp): Record<string, any> => {
-  const { id, ...rest } = op; // Excluir id del cliente
-  const dto: Record<string, any> = {};
-  dto.scope = rest.Scope;
-  dto.area = rest.Area;
-  dto.tableFrom = stripSchemaPrefix(rest.TableFrom);
-  dto.tableTo = stripSchemaPrefix(rest.TableTo);
-  dto.columnFrom = rest.ColumnFrom;
-  dto.columnTo = rest.ColumnTo;
-  dto.type = rest.Type;
-  dto.note = rest.Note;
-  return dto;
+const toCamelCaseOperation = (op: RenameOp): RenameItemDto => {
+  return {
+    scope: op.Scope,
+    area: op.Area,
+    tableFrom: stripSchemaPrefix(op.TableFrom),
+    tableTo: stripSchemaPrefix(op.TableTo),
+    columnFrom: op.ColumnFrom,
+    columnTo: op.ColumnTo,
+    type: op.Type,
+    note: op.Note,
+  };
 };
-
 
 export function PlanBuilder() {
   const { state, dispatch, dbSession } = useAppContext();
@@ -84,7 +76,6 @@ export function PlanBuilder() {
     () => state.plan.some(op => op.Scope.startsWith('drop-')),
     [state.plan]
   );
-
 
   const handleAddNew = () => {
     setEditingOp(null);
@@ -112,7 +103,6 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    // Centralizamos la transformación del plan aquí
     const camelCaseRenames = state.plan.map(toCamelCaseOperation);
     const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
@@ -120,12 +110,12 @@ export function PlanBuilder() {
       if (actionType === 'cleanup') {
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: '', // Requerido por el DTO, pero el servicio usará el SessionId
+          ConnectionString: '',
           Renames: camelCaseRenames,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
+          AllowDestructive: !!AllowDestructive, // <--- Propiedad clave añadida
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
