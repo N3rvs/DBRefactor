@@ -41,7 +41,7 @@ export type GenerateOptions = {
   AllowDestructive?: boolean;
 };
 
-export type RefactorPlan = { Renames: RenameItemDto[] };
+export type RefactorPlan = { renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -58,20 +58,24 @@ export type SqlBundle = {
 };
 
 export type ChangedFile = { Path: string; Changed: boolean; };
-export type CodeFixRunResult = { FilesScanned: number; FilesChanged: number; Changes: ChangedFile[]; };
+export type CodeFixRunResult = {
+  FilesScanned?: number;
+  FilesChanged?: number;
+  Changes?: ChangedFile[];
+};
 
 // ---- Plan (/plan) ----
 export type PlanRequest = GenerateOptions & { Renames: RenameItemDto[] };
-export type PlanResponse = { Sql: SqlBundle; Report: unknown }; // PlanResponseDto en el backend
+export type PlanResponse = { sql?: SqlBundle; report?: unknown }; // PlanResponseDto en el backend
 
 // ---- Requests ----
 export type ConnectRequest = { ConnectionString: string; TtlSeconds?: number; };
 export type DisconnectRequest = { SessionId: string; };
 export type AnalyzeSchemaRequest = ConnectionProps;
 
-// /refactor/run necesita el JSON completo del plan de /plan
+// /refactor/run necesita el JSON del plan
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: PlanResponse;
+  Plan: { renames: RenameItemDto[] }; // Clave `renames` en minúsculas
   Apply: boolean;
   RootKey?: string;
 };
@@ -95,7 +99,13 @@ export type ConnectResponse = { SessionId: string; ExpiresAtUtc: string; };
 export type AnalyzeSchemaResponse = DbSchema;
 
 // El shape exacto de /refactor/run puede variar -> lo dejamos laxo
-export type RefactorResponse = Record<string, unknown>;
+export type RefactorResponse = {
+  ok?: boolean;
+  apply?: boolean;
+  sql?: SqlBundle;
+  codefix?: CodeFixRunResult;
+  dbLog?: string[];
+};
 
 export type CleanupResponse = {
   ok?: boolean;
@@ -107,3 +117,5 @@ export type CleanupResponse = {
 export type CodeFixResponse = CodeFixRunResult;
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
+
+    

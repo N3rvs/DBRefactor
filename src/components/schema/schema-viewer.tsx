@@ -10,7 +10,6 @@ import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from 
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
-import { Button } from '@/components/ui/button';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
@@ -23,45 +22,40 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
   data, columns, caption, actions,
 }: {
   data: T[] | undefined;
-  columns: { key: string; header: string; className?: string }[];
+  columns: { key: string; header: string }[];
   caption: string;
   actions?: (item: T) => React.ReactNode;
 }) => {
   if (!data || data.length === 0) {
-    return (
-      <div className="my-4">
-        <h4 className="font-semibold text-base mb-2">{caption}</h4>
-        <p className="text-sm text-muted-foreground mt-2 px-2">No se encontraron {caption.toLowerCase()}.</p>
-      </div>
-    )
+    return <p className="text-sm text-muted-foreground mt-2">{caption} no encontrados.</p>;
   }
   return (
     <div className="my-4">
-      <h4 className="font-semibold text-base mb-2">{caption}</h4>
-      <div className="border rounded-md">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map(col => <TableHead key={col.key} className={col.className}>{col.header}</TableHead>)}
-              {actions && <TableHead className="w-[50px] text-right" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.Name}>
-                {columns.map(col => (
-                  <TableCell key={col.key} className="font-mono text-xs">
-                    {Array.isArray(item[col.key]) ? (item[col.key] as any[]).join(', ')
-                      : typeof item[col.key] === 'boolean' ? (item[col.key] ? 'Sí' : 'No')
+      <h4 className="font-semibold text-sm mb-2">{caption}</h4>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map(col => <TableHead key={col.key}>{col.header}</TableHead>)}
+            {actions && <TableHead className="w-[50px]" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.map((item) => (
+            <TableRow key={item.Name}>
+              {columns.map(col => (
+                <TableCell key={col.key} className="font-mono text-xs">
+                  {Array.isArray(item[col.key])
+                    ? (item[col.key] as any[]).join(', ')
+                    : typeof item[col.key] === 'boolean'
+                      ? (item[col.key] ? 'Sí' : 'No')
                       : item[col.key]}
-                  </TableCell>
-                ))}
-                {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </TableCell>
+              ))}
+              {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
@@ -93,30 +87,42 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: fq(table), ColumnFrom: column.Name });
   };
 
-  const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
+  // helpers para evitar que el click del menú dispare el toggle del acordeón
+  const stopToggle = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    
+    e.nativeEvent?.preventDefault?.();
+  };
 
   return (
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={fq(table)} key={fq(table)} className="border-b">
-          <AccordionTrigger>
+          {/* ⚠️ NO usamos asChild aquí. AccordionTrigger sigue siendo un <button>. */}
+          <AccordionTrigger className="px-0">
+            {/* Contenido dentro del botón: OK, pero sin <button> internos */}
             <div className="flex w-full items-center justify-between gap-2">
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-base">{fq(table)}</span>
                 <Badge variant="outline">{table.Schema}</Badge>
               </div>
+
+              {/* ✅ Menú: el trigger es un <span>, no un <button> */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={stopPropagation}
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={stopToggle}
+                    onPointerDown={stopToggle}
+                    onKeyDown={stopToggle}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+                    aria-label="Acciones de tabla"
                   >
                     <MoreHorizontal className="h-4 w-4" />
-                  </Button>
+                  </span>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={stopPropagation}>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                   <DropdownMenuItem onClick={() => handleRenameTable(table)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Renombrar Tabla
@@ -138,33 +144,32 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
             </div>
           </AccordionTrigger>
 
-          <AccordionContent className="bg-muted/20 p-4 rounded-md border">
-            <div className="grid grid-cols-3 gap-4 text-sm mb-4 border-b pb-4">
-              <div><span className="font-semibold text-muted-foreground">Columnas:</span> {table.Columns.length}</div>
-              <div><span className="font-semibold text-muted-foreground">Claves Foráneas:</span> {table.ForeignKeys.length}</div>
-              <div><span className="font-semibold text-muted-foreground">Índices:</span> {table.Indexes.length}</div>
+          <AccordionContent className="bg-muted/30 p-4 rounded-md">
+            <div className="grid grid-cols-3 gap-4 text-sm mb-4">
+              <div><span className="font-semibold">Columnas:</span> {table.Columns.length}</div>
+              <div><span className="font-semibold">Claves Foráneas:</span> {table.ForeignKeys.length}</div>
+              <div><span className="font-semibold">Índices:</span> {table.Indexes.length}</div>
             </div>
 
             <DetailTable<ColumnInfo>
               data={table.Columns}
-              columns={[
-                { key: 'Name', header: 'Nombre', className: 'w-[40%]' },
-                { key: 'SqlType', header: 'Tipo', className: 'w-[40%]' }
-              ]}
+              columns={[{ key: 'Name', header: 'Nombre' }, { key: 'SqlType', header: 'Tipo' }]}
               caption="Columnas"
               actions={(column) => (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                     <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={stopPropagation}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+                      aria-label="Acciones de columna"
                     >
                       <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    </span>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={stopPropagation}>
+                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenuItem onClick={() => handleRenameColumn(table, column)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Renombrar Columna

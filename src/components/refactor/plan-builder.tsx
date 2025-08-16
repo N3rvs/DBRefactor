@@ -81,7 +81,7 @@ export function PlanBuilder() {
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     try {
       const plainRenames: RenameItemDto[] = state.plan.map(({ id, ...rest }) => rest);
-      const { rootKey, UseSynonyms, UseViews, Cqrs, AllowDestructive } = state.options;
+      const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
       if (actionType === 'cleanup') {
         const response = await api.runCleanup({
@@ -95,17 +95,20 @@ export function PlanBuilder() {
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
-            sql: response.sql,
+            sql: response.sql || null,
             codefix: null,
-            dbLog: response.log,
+            dbLog: response.log || null,
           },
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
       } else {
         const isApply = actionType === 'apply';
+        // Backend espera la clave `renames` en minúsculas.
+        const runPlan = { renames: plainRenames };
+
         const response = await api.runRefactor({
           SessionId: sessionId,
-          Plan: { Renames: plainRenames },
+          Plan: runPlan, // Usamos el plan con la clave en minúsculas
           Apply: isApply,
           RootKey: rootKey,
           UseSynonyms,
@@ -115,8 +118,8 @@ export function PlanBuilder() {
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
-            sql: response.sql,
-            codefix: response.codefix,
+            sql: response.sql || null,
+            codefix: response.codefix || null,
             dbLog: response.dbLog || null,
           },
         });
@@ -326,3 +329,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    

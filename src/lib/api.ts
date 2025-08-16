@@ -12,6 +12,8 @@ import type {
   DisconnectRequest,
   RefactorRequest,
   RefactorResponse,
+  PlanRequest,
+  PlanResponse,
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_DBREFACTOR_API || 'http://localhost:7040';
@@ -66,7 +68,11 @@ async function fetchApi<T>(
     
     // Para otras respuestas OK, intentar parsear JSON
     const responseText = await response.text();
-    return JSON.parse(responseText);
+    // Algunas respuestas como disconnect pueden devolver '{"ok":true}'
+    if (responseText) {
+      return JSON.parse(responseText);
+    }
+    return { ok: true } as T;
 
   } catch (error) {
     clearTimeout(timeout);
@@ -122,3 +128,12 @@ export const runCodeFix = (body: CodeFixRequest) => {
     body: JSON.stringify(body),
   });
 };
+
+export const createPlan = (body: PlanRequest) => {
+  return fetchApi<PlanResponse>('/plan', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+
+    

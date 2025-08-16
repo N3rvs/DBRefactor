@@ -34,9 +34,12 @@ const InfoTooltip = ({ content }: { content: string }) => (
 
 export function RefactorOptions() {
   const { state, dispatch } = useAppContext();
-  const { UseSynonyms, UseViews, AllowDestructive } = state.options;
+  const { UseSynonyms, UseViews, Cqrs, AllowDestructive } = state.options;
 
-  const handleOptionChange = (option: 'UseSynonyms' | 'UseViews' | 'AllowDestructive', value: boolean) => {
+  const handleOptionChange = (
+    option: 'UseSynonyms' | 'UseViews' | 'Cqrs' | 'AllowDestructive',
+    value: boolean
+  ) => {
     dispatch({ type: 'SET_OPTION', payload: { key: option, value } });
   };
 
@@ -51,38 +54,52 @@ export function RefactorOptions() {
           Configura las opciones de compatibilidad y limpieza.
         </CardDescription>
       </CardHeader>
+
       <TooltipProvider>
         <CardContent className="space-y-4">
           <p className="text-sm font-semibold text-muted-foreground">Compatibilidad</p>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Label htmlFor="useSynonyms">
-                Usar Sinónimos
-              </Label>
+              <Label htmlFor="useSynonyms">Usar Sinónimos</Label>
               <InfoTooltip content="Crea sinónimos para las tablas/columnas renombradas para compatibilidad con versiones anteriores. Esto permite que el código antiguo funcione sin actualizaciones inmediatas." />
             </div>
             <Switch
               id="useSynonyms"
-              checked={UseSynonyms}
-              onCheckedChange={(value) => handleOptionChange('UseSynonyms', value)}
+              checked={!!UseSynonyms}
+              onCheckedChange={(v) => handleOptionChange('UseSynonyms', v)}
             />
           </div>
+
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Label htmlFor="useViews">
-                Usar Vistas
-              </Label>
+              <Label htmlFor="useViews">Usar Vistas</Label>
               <InfoTooltip content="Genera vistas que imitan la estructura original de la tabla, asegurando que las consultas de lectura de los sistemas heredados continúen funcionando sin problemas." />
             </div>
             <Switch
               id="useViews"
-              checked={UseViews}
-              onCheckedChange={(value) => handleOptionChange('UseViews', value)}
+              checked={!!UseViews}
+              onCheckedChange={(v) => handleOptionChange('UseViews', v)}
             />
           </div>
+
+          {/* 🔹 CQRS */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Label htmlFor="useCqrs">Usar CQRS</Label>
+              <InfoTooltip content="Separa comandos (escritura) y consultas (lectura). El plan generará objetos SQL/compatibilidad pensados para dos rutas de acceso distintas." />
+            </div>
+            <Switch
+              id="useCqrs"
+              checked={!!Cqrs}
+              onCheckedChange={(v) => handleOptionChange('Cqrs', v)}
+            />
+          </div>
+
           <Separator />
-           <p className="text-sm font-semibold text-muted-foreground">Operaciones Destructivas</p>
-           <div className="flex items-center justify-between">
+
+          <p className="text-sm font-semibold text-muted-foreground">Operaciones Destructivas</p>
+          <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Label htmlFor="allowDestructive" className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-4 w-4" />
@@ -92,8 +109,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="allowDestructive"
-              checked={AllowDestructive}
-              onCheckedChange={(value) => handleOptionChange('AllowDestructive', value)}
+              checked={!!AllowDestructive}
+              onCheckedChange={(v) => handleOptionChange('AllowDestructive', v)}
             />
           </div>
         </CardContent>
