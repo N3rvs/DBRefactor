@@ -47,19 +47,26 @@ import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   if (!tableName) return '';
-  return tableName.toLowerCase().startsWith('dbo.') ? tableName.substring(4) : tableName;
+  const name = String(tableName);
+  return name.toLowerCase().startsWith('dbo.') ? name.substring(4) : name;
 };
 
-const toCamelCaseOperation = (op: RenameOp): RenameItemDto => {
+const toRenameItemDto = (op: RenameOp): RenameItemDto => {
   return {
-    scope: op.Scope,
-    area: op.Area,
-    tableFrom: stripSchemaPrefix(op.TableFrom),
-    tableTo: stripSchemaPrefix(op.TableTo),
-    columnFrom: op.ColumnFrom,
-    columnTo: op.ColumnTo,
-    type: op.Type,
-    note: op.Note,
+    Scope: op.Scope,
+    Area: op.Area,
+    TableFrom: stripSchemaPrefix(op.TableFrom),
+    TableTo: stripSchemaPrefix(op.TableTo),
+    ColumnFrom: op.ColumnFrom,
+    ColumnTo: op.ColumnTo,
+    Type: op.Type,
+    Note: op.Note,
+    Default: op.Default,
+    Nullable: op.Nullable,
+    Length: op.Length,
+    Precision: op.Precision,
+    Scale: op.Scale,
+    Computed: op.Computed,
   };
 };
 
@@ -103,19 +110,18 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    const camelCaseRenames = state.plan.map(toCamelCaseOperation);
+    const renamesDto = state.plan.map(toRenameItemDto);
     const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
     try {
       if (actionType === 'cleanup') {
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: '',
-          Renames: camelCaseRenames,
+          ConnectionString: "", // Requerido por el DTO, pero el backend usará el SessionId.
+          Renames: renamesDto,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, // <--- Propiedad clave añadida
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -126,7 +132,7 @@ export function PlanBuilder() {
             dbLog: response.log || null,
           },
         });
-        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad y las operaciones destructivas han sido procesadas.' });
+        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });
       } else {
         const isApply = actionType === 'apply';
         const runPayload = {
@@ -137,7 +143,7 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Plan: { renames: camelCaseRenames },
+          Plan: { renames: renamesDto },
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
@@ -339,20 +345,25 @@ export function PlanBuilder() {
                 <Play className="mr-2 h-4 w-4"/>
                 Previsualizar Plan
             </Button>
-            <Button onClick={() => handleAction('apply')} disabled={state.results.isLoading || state.plan.length === 0}>
+            <Button 
+                onClick={() => handleAction('apply')}
+                disabled={state.results.isLoading || state.plan.length === 0}
+                variant={hasDestructiveOps ? "destructive" : "default"}
+                title={hasDestructiveOps ? "Aplica el plan, incluyendo operaciones de borrado. Requiere 'Permitir Eliminaciones' habilitado." : "Aplica el plan de refactorización."}
+            >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <ClipboardCheck className="mr-2 h-4 w-4"/>
                 Aplicar Plan
             </Button>
             <Button 
-                variant={hasDestructiveOps ? "destructive" : "outline"} 
+                variant={"outline"} 
                 onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0 || !state.options.AllowDestructive}
-                title={!state.options.AllowDestructive ? "Habilite 'Permitir Eliminaciones' en las opciones." : "Elimina objetos de compatibilidad y ejecuta operaciones de borrado."}
+                disabled={state.results.isLoading || state.plan.length === 0}
+                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en un paso anterior."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
-                Limpiar
+                Limpiar Objetos
             </Button>
         </CardFooter>
       </Card>
