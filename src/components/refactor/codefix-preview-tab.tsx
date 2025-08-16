@@ -3,7 +3,7 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { CodeFixRunResult } from '@/lib/types';
-import { CheckCircle2, File, FileX2 } from 'lucide-react';
+import { CheckCircle2, FileX2 } from 'lucide-react';
 
 interface CodeFixPreviewTabProps {
   codefix: CodeFixRunResult | null;
@@ -12,16 +12,19 @@ interface CodeFixPreviewTabProps {
 export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
   if (!codefix) return null;
 
+  // Los cambios pueden ser opcionales en la respuesta
+  const changedFiles = codefix.Changes?.filter(f => f.Changed) ?? [];
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="p-4 rounded-md border bg-muted">
             <p className="text-sm text-muted-foreground">Archivos Escaneados</p>
-            <p className="text-2xl font-bold">{codefix.FilesScanned}</p>
+            <p className="text-2xl font-bold">{codefix.FilesScanned ?? 0}</p>
         </div>
         <div className="p-4 rounded-md border bg-muted">
             <p className="text-sm text-muted-foreground">Archivos Modificados</p>
-            <p className="text-2xl font-bold text-primary">{codefix.FilesChanged}</p>
+            <p className="text-2xl font-bold text-primary">{codefix.FilesChanged ?? 0}</p>
         </div>
       </div>
       
@@ -35,8 +38,8 @@ export function CodeFixPreviewTab({ codefix }: CodeFixPreviewTabProps) {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {codefix.Changes.filter(f => f.Changed).length > 0 ? (
-                    codefix.Changes.filter(f => f.Changed).map((file, index) => (
+                {changedFiles.length > 0 ? (
+                    changedFiles.map((file, index) => (
                     <TableRow key={index}>
                         <TableCell>
                             {file.Changed ? (
