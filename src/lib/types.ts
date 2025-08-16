@@ -41,7 +41,7 @@ export type GenerateOptions = {
   AllowDestructive?: boolean;
 };
 
-export type RefactorPlan = { renames: RenameItemDto[] };
+export type RefactorPlan = { Renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -75,7 +75,7 @@ export type AnalyzeSchemaRequest = ConnectionProps;
 
 // /refactor/run necesita el JSON del plan
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: { renames: RenameItemDto[] }; // Clave `renames` en minúsculas
+  Plan: { Renames: RenameItemDto[] }; 
   Apply: boolean;
   RootKey?: string;
 };

@@ -103,12 +103,12 @@ export function PlanBuilder() {
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
       } else {
         const isApply = actionType === 'apply';
-        // Backend espera la clave `renames` en minúsculas.
-        const runPlan = { renames: plainRenames };
+        // El backend en /refactor/run espera Plan: { Renames: [...] }
+        const runPlan = { Renames: plainRenames };
 
         const response = await api.runRefactor({
           SessionId: sessionId,
-          Plan: runPlan, // Usamos el plan con la clave en minúsculas
+          Plan: runPlan, 
           Apply: isApply,
           RootKey: rootKey,
           UseSynonyms,
