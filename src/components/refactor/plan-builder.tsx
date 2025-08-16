@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -59,7 +59,6 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
 const toCamelCaseOperation = (op: RenameOp): Record<string, any> => {
   const { id, ...rest } = op; // Excluir id del cliente
   const dto: Record<string, any> = {};
-  // Asegurarse de que las propiedades se envían en camelCase
   dto.scope = rest.Scope;
   dto.area = rest.Area;
   dto.tableFrom = stripSchemaPrefix(rest.TableFrom);
@@ -80,6 +79,12 @@ export function PlanBuilder() {
   const [editingOp, setEditingOp] = useState<RenameOp | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
+
+  const hasDestructiveOps = useMemo(
+    () => state.plan.some(op => op.Scope.startsWith('drop-')),
+    [state.plan]
+  );
+
 
   const handleAddNew = () => {
     setEditingOp(null);
@@ -107,28 +112,20 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    // Unifica la transformación del plan aquí para todas las acciones
+    // Centralizamos la transformación del plan aquí
     const camelCaseRenames = state.plan.map(toCamelCaseOperation);
     const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
     try {
       if (actionType === 'cleanup') {
-        // Payload específico para /apply/cleanup, basado en CleanupRequestDto
         const cleanupPayload = {
           SessionId: sessionId,
           ConnectionString: '', // Requerido por el DTO, pero el servicio usará el SessionId
-          Renames: camelCaseRenames.map(op => ({ // El backend espera PascalCase para los DTO
-              Scope: op.scope,
-              TableFrom: op.tableFrom,
-              TableTo: op.tableTo,
-              ColumnFrom: op.columnFrom,
-              ColumnTo: op.columnTo,
-              Type: op.type,
-              Note: op.note
-          })),
+          Renames: camelCaseRenames,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
+          AllowDestructive: !!AllowDestructive,
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -139,10 +136,8 @@ export function PlanBuilder() {
             dbLog: response.log || null,
           },
         });
-        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
-
+        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad y las operaciones destructivas han sido procesadas.' });
       } else {
-        // Payload para /refactor/run (preview y apply)
         const isApply = actionType === 'apply';
         const runPayload = {
           SessionId: sessionId,
@@ -165,13 +160,13 @@ export function PlanBuilder() {
         });
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       }
-
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
       toast({ variant: 'destructive', title: 'Operación Fallida', description: errorMsg });
     }
   };
+
 
   const handleSuggestOrder = async () => {
     if (!sessionId) {
@@ -359,7 +354,12 @@ export function PlanBuilder() {
                  <ClipboardCheck className="mr-2 h-4 w-4"/>
                 Aplicar Plan
             </Button>
-            <Button variant="destructive" onClick={() => handleAction('cleanup')} disabled={state.results.isLoading || state.plan.length === 0}>
+            <Button 
+                variant={hasDestructiveOps ? "destructive" : "outline"} 
+                onClick={() => handleAction('cleanup')} 
+                disabled={state.results.isLoading || state.plan.length === 0 || !state.options.AllowDestructive}
+                title={!state.options.AllowDestructive ? "Habilite 'Permitir Eliminaciones' en las opciones." : "Elimina objetos de compatibilidad y ejecuta operaciones de borrado."}
+            >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
                 Limpiar
@@ -369,9 +369,3 @@ export function PlanBuilder() {
     </>
   );
 }
-
-    
-
-    
-
-    
