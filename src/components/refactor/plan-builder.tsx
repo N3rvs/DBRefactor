@@ -51,6 +51,8 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   return name.toLowerCase().startsWith('dbo.') ? name.substring(4) : name;
 };
 
+// Se asegura de que el scope y las claves estén en camelCase para el backend
+// y que los nombres de tabla no tengan el prefijo.
 const toRenameItemDto = (op: RenameOp): RenameItemDto => {
   return {
     Scope: op.Scope,
@@ -122,6 +124,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
+          AllowDestructive: !!AllowDestructive, // Añadir la bandera aquí también por si acaso
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -142,7 +145,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
+          AllowDestructive: !!AllowDestructive, // Asegurarnos de que se envía el valor del estado
           Plan: { renames: renamesDto },
         };
         const response = await api.runRefactor(runPayload);
@@ -359,7 +362,7 @@ export function PlanBuilder() {
                 variant={"outline"} 
                 onClick={() => handleAction('cleanup')} 
                 disabled={state.results.isLoading || state.plan.length === 0}
-                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en un paso anterior."}
+                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en un paso anterior de 'Aplicar'."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
