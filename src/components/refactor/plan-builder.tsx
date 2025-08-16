@@ -45,6 +45,25 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
+// Helper para transformar a camelCase como espera el backend
+const toCamelCaseRename = (op: RenameItemDto) => ({
+    scope: op.Scope,
+    tableFrom: op.TableFrom,
+    tableTo: op.TableTo,
+    columnFrom: op.ColumnFrom,
+    columnTo: op.ColumnTo,
+    type: op.Type,
+    area: op.Area,
+    note: op.Note,
+    default: op.Default,
+    nullable: op.Nullable,
+    length: op.Length,
+    precision: op.Precision,
+    scale: op.Scale,
+    computed: op.Computed
+});
+
+
 export function PlanBuilder() {
   const { state, dispatch, dbSession } = useAppContext();
   const { sessionId } = dbSession;
@@ -104,9 +123,9 @@ export function PlanBuilder() {
       } else {
         const isApply = actionType === 'apply';
         
-        // Construye el plan con `renames` en minúsculas, como espera el backend.
+        // Construye el plan con `renames` en minúsculas y las propiedades internas en camelCase.
         const runPlan = {
-          renames: plainRenames
+          renames: plainRenames.map(toCamelCaseRename)
         };
 
         const response = await api.runRefactor({
@@ -116,6 +135,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
+          AllowDestructive: !!AllowDestructive, // Añadido para consistencia
           Plan: runPlan,
         });
 
@@ -333,5 +353,3 @@ export function PlanBuilder() {
     </>
   );
 }
-
-    
