@@ -147,7 +147,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
+          AllowDestructive: !!AllowDestructive, // Pass this for cleanup as well
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -351,9 +351,9 @@ export function PlanBuilder() {
             </Button>
             <Button 
                 onClick={() => handleAction('apply')}
-                disabled={state.results.isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.AllowDestructive)}
+                disabled={state.results.isLoading || state.plan.length === 0}
                 variant={hasDestructiveOps && state.options.AllowDestructive ? "destructive" : "default"}
-                title={hasDestructiveOps && !state.options.AllowDestructive ? "Para aplicar un plan con borrados, debe habilitar 'Permitir Eliminaciones' en las opciones." : "Aplica el plan de refactorización."}
+                title={hasDestructiveOps && !state.options.AllowDestructive ? "Para aplicar un plan con borrados, debe habilitar 'Permitir Eliminaciones' y usar 'Aplicar Plan'." : "Aplica el plan de refactorización."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <ClipboardCheck className="mr-2 h-4 w-4"/>
@@ -362,8 +362,8 @@ export function PlanBuilder() {
             <Button 
                 variant={"outline"} 
                 onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0}
-                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."}
+                disabled={state.results.isLoading || state.plan.length === 0 || hasDestructiveOps}
+                title={hasDestructiveOps ? "Las operaciones de borrado se ejecutan con 'Aplicar Plan'. 'Limpiar' es solo para objetos de compatibilidad." : "Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
