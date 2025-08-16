@@ -59,19 +59,15 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
 const toCamelCaseOperation = (op: RenameOp): Record<string, any> => {
   const { id, ...rest } = op; // Excluir id del cliente
   const dto: Record<string, any> = {};
-  for (const key in rest) {
-    if (Object.prototype.hasOwnProperty.call(rest, key)) {
-      const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-      // @ts-ignore
-      const value = rest[key];
-
-      if (camelKey === 'tableFrom' || camelKey === 'tableTo') {
-        dto[camelKey] = stripSchemaPrefix(value);
-      } else {
-        dto[camelKey] = value;
-      }
-    }
-  }
+  // Asegurarse de que las propiedades se envían en camelCase
+  dto.scope = rest.Scope;
+  dto.area = rest.Area;
+  dto.tableFrom = stripSchemaPrefix(rest.TableFrom);
+  dto.tableTo = stripSchemaPrefix(rest.TableTo);
+  dto.columnFrom = rest.ColumnFrom;
+  dto.columnTo = rest.ColumnTo;
+  dto.type = rest.Type;
+  dto.note = rest.Note;
   return dto;
 };
 
@@ -117,14 +113,22 @@ export function PlanBuilder() {
 
     try {
       if (actionType === 'cleanup') {
-        // Payload específico para /apply/cleanup
+        // Payload específico para /apply/cleanup, basado en CleanupRequestDto
         const cleanupPayload = {
           SessionId: sessionId,
+          ConnectionString: '', // Requerido por el DTO, pero el servicio usará el SessionId
+          Renames: camelCaseRenames.map(op => ({ // El backend espera PascalCase para los DTO
+              Scope: op.scope,
+              TableFrom: op.tableFrom,
+              TableTo: op.tableTo,
+              ColumnFrom: op.columnFrom,
+              ColumnTo: op.columnTo,
+              Type: op.type,
+              Note: op.note
+          })),
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
-          Renames: camelCaseRenames, // El backend espera 'Renames' aquí (PascalCase)
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -140,9 +144,6 @@ export function PlanBuilder() {
       } else {
         // Payload para /refactor/run (preview y apply)
         const isApply = actionType === 'apply';
-        const runPlan = {
-          renames: camelCaseRenames, 
-        };
         const runPayload = {
           SessionId: sessionId,
           Apply: isApply,
@@ -151,7 +152,7 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Plan: runPlan,
+          Plan: { renames: camelCaseRenames },
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
@@ -368,6 +369,8 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    
 
     
 
