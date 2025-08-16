@@ -37,7 +37,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { RenameOp, RenameItemDto } from '@/lib/types';
+import type { RenameOp } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -55,24 +55,22 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   return tableName;
 };
 
-
 // Helper para transformar a camelCase como espera el backend
-const toCamelCaseRename = (op: RenameOp): Record<string, any> => {
-  // Quitamos el id del cliente y convertimos las claves a camelCase
-  const { id, ...rest } = op;
+const toCamelCaseOperation = (op: RenameOp): Record<string, any> => {
+  const { id, ...rest } = op; // Excluir id del cliente
   const dto: Record<string, any> = {};
   for (const key in rest) {
-      if (Object.prototype.hasOwnProperty.call(rest, key)) {
-          const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
-          // @ts-ignore
-          const value = rest[key];
+    if (Object.prototype.hasOwnProperty.call(rest, key)) {
+      const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+      // @ts-ignore
+      const value = rest[key];
 
-          if (camelKey === 'tableFrom' || camelKey === 'tableTo') {
-              dto[camelKey] = stripSchemaPrefix(value);
-          } else {
-              dto[camelKey] = value;
-          }
+      if (camelKey === 'tableFrom' || camelKey === 'tableTo') {
+        dto[camelKey] = stripSchemaPrefix(value);
+      } else {
+        dto[camelKey] = value;
       }
+    }
   }
   return dto;
 };
@@ -112,21 +110,23 @@ export function PlanBuilder() {
     }
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
+    
+    // Unifica la transformación del plan aquí para todas las acciones
+    const camelCaseRenames = state.plan.map(toCamelCaseOperation);
+    const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
+
     try {
-      const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
-
-      // Unifica la transformación del plan aquí para todas las acciones
-      const camelCaseRenames = state.plan.map(toCamelCaseRename);
-
       if (actionType === 'cleanup') {
-        const response = await api.runCleanup({
+        // Payload específico para /apply/cleanup
+        const cleanupPayload = {
           SessionId: sessionId,
-          Renames: camelCaseRenames, // El backend espera 'Renames' para cleanup
-          UseSynonyms,
-          UseViews,
-          Cqrs,
-          AllowDestructive,
-        });
+          UseSynonyms: !!UseSynonyms,
+          UseViews: !!UseViews,
+          Cqrs: !!Cqrs,
+          AllowDestructive: !!AllowDestructive,
+          Renames: camelCaseRenames, // El backend espera 'Renames' aquí (PascalCase)
+        };
+        const response = await api.runCleanup(cleanupPayload);
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -136,15 +136,14 @@ export function PlanBuilder() {
           },
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
-      } else {
-        // Para 'preview' y 'apply'
-        const isApply = actionType === 'apply';
-        
-        const runPlan = {
-          renames: camelCaseRenames, // El backend espera 'renames' (minúscula) para /refactor/run
-        };
 
-        const response = await api.runRefactor({
+      } else {
+        // Payload para /refactor/run (preview y apply)
+        const isApply = actionType === 'apply';
+        const runPlan = {
+          renames: camelCaseRenames, 
+        };
+        const runPayload = {
           SessionId: sessionId,
           Apply: isApply,
           RootKey: rootKey,
@@ -153,8 +152,8 @@ export function PlanBuilder() {
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
           Plan: runPlan,
-        });
-
+        };
+        const response = await api.runRefactor(runPayload);
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -369,5 +368,7 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    
 
     
