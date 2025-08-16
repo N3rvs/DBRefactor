@@ -56,21 +56,21 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string | undef
 };
 
 // Helper para transformar a camelCase como espera el backend
-const toCamelCaseRename = (op: RenameItemDto): RenameItemDto => ({
-    Scope: op.Scope,
-    TableFrom: stripSchemaPrefix(op.TableFrom) || '',
-    TableTo: stripSchemaPrefix(op.TableTo),
-    ColumnFrom: op.ColumnFrom,
-    ColumnTo: op.ColumnTo,
-    Type: op.Type,
-    Area: op.Area,
-    Note: op.Note,
-    Default: op.Default,
-    Nullable: op.Nullable,
-    Length: op.Length,
-    Precision: op.Precision,
-    Scale: op.Scale,
-    Computed: op.Computed,
+const toCamelCaseRename = (op: RenameItemDto): Record<string, any> => ({
+    scope: op.Scope,
+    tableFrom: stripSchemaPrefix(op.TableFrom),
+    tableTo: stripSchemaPrefix(op.TableTo),
+    columnFrom: op.ColumnFrom,
+    columnTo: op.ColumnTo,
+    type: op.Type,
+    area: op.Area,
+    note: op.Note,
+    default: op.Default,
+    nullable: op.Nullable,
+    length: op.Length,
+    precision: op.Precision,
+    scale: op.Scale,
+    computed: op.Computed,
 });
 
 
@@ -112,12 +112,12 @@ export function PlanBuilder() {
       const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
       // Limpia DTOs y quita el id del cliente ANTES de enviarlos.
-      const plainRenames = state.plan.map(({ id, ...rest }) => toCamelCaseRename(rest));
+      const camelCaseRenames = state.plan.map(({ id, ...rest }) => toCamelCaseRename(rest));
 
       if (actionType === 'cleanup') {
         const response = await api.runCleanup({
           SessionId: sessionId,
-          Renames: plainRenames,
+          Renames: camelCaseRenames,
           UseSynonyms,
           UseViews,
           Cqrs,
@@ -136,7 +136,7 @@ export function PlanBuilder() {
         const isApply = actionType === 'apply';
         
         const runPlan = {
-          renames: plainRenames
+          renames: camelCaseRenames,
         };
 
         const response = await api.runRefactor({
