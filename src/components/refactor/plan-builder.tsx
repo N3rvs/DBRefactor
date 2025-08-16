@@ -103,8 +103,8 @@ export function PlanBuilder() {
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido eliminados.' });
       } else {
         const isApply = actionType === 'apply';
-        // El backend en /refactor/run espera Plan: { Renames: [...] }
-        const runPlan = { Renames: plainRenames };
+        // El backend en /refactor/run espera Plan: { renames: [...] }
+        const runPlan = { renames: plainRenames };
 
         const response = await api.runRefactor({
           SessionId: sessionId,
@@ -329,5 +329,3 @@ export function PlanBuilder() {
     </>
   );
 }
-
-    
