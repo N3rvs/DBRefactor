@@ -73,9 +73,9 @@ export type ConnectRequest = { ConnectionString: string; TtlSeconds?: number; };
 export type DisconnectRequest = { SessionId: string; };
 export type AnalyzeSchemaRequest = ConnectionProps;
 
-// /refactor/run necesita el JSON del plan
+// /refactor/run: La lista de Renames va en el nivel superior
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: RefactorPlan; 
+  Renames: RenameItemDto[];
   Apply: boolean;
   RootKey?: string;
 };
@@ -117,3 +117,5 @@ export type CleanupResponse = {
 export type CodeFixResponse = CodeFixRunResult;
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
+
+    

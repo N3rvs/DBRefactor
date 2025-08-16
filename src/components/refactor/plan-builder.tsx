@@ -116,7 +116,7 @@ export function PlanBuilder() {
     const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
     try {
-       if (actionType === 'apply' || actionType === 'preview') {
+      if (actionType === 'apply' || actionType === 'preview') {
         const isApply = actionType === 'apply';
         const runPayload = {
           SessionId: sessionId,
@@ -126,7 +126,7 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Plan: { Renames: renamesDto }, // C# backend expects PascalCase
+          Renames: renamesDto,
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
@@ -140,21 +140,22 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
+        // La limpieza no ejecuta operaciones destructivas, solo de compatibilidad
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: "", 
+          ConnectionString: "", // El backend puede necesitarlo aunque esté vacío
           Renames: renamesDto,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
+          AllowDestructive: false, // La limpieza no debe ser destructiva
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
             sql: response.sql || null,
-            codefix: null,
+            codefix: null, // La limpieza no devuelve correcciones de código
             dbLog: response.log || null,
           },
         });
@@ -361,8 +362,8 @@ export function PlanBuilder() {
             <Button 
                 variant={"outline"} 
                 onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0 || hasDestructiveOps}
-                title={hasDestructiveOps ? "Las operaciones de borrado se ejecutan con 'Aplicar Plan'. 'Limpiar' es solo para objetos de compatibilidad." : "Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."}
+                disabled={state.results.isLoading || state.plan.length === 0}
+                title="Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
@@ -373,3 +374,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    
