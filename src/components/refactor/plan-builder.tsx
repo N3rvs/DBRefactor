@@ -51,24 +51,24 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   return name.toLowerCase().startsWith('dbo.') ? name.substring(4) : name;
 };
 
-// Se asegura de que el scope y las claves estén en camelCase para el backend
-// y que los nombres de tabla no tengan el prefijo.
+// Se asegura de que todas las claves existan para coincidir con el DTO del backend,
+// inicializando las opcionales a null si no están presentes.
 const toRenameItemDto = (op: RenameOp): RenameItemDto => {
   return {
     Scope: op.Scope,
-    Area: op.Area,
+    Area: op.Area || null,
     TableFrom: stripSchemaPrefix(op.TableFrom),
-    TableTo: stripSchemaPrefix(op.TableTo),
-    ColumnFrom: op.ColumnFrom,
-    ColumnTo: op.ColumnTo,
-    Type: op.Type,
-    Note: op.Note,
-    Default: op.Default,
-    Nullable: op.Nullable,
-    Length: op.Length,
-    Precision: op.Precision,
-    Scale: op.Scale,
-    Computed: op.Computed,
+    TableTo: stripSchemaPrefix(op.TableTo) || null,
+    ColumnFrom: op.ColumnFrom || null,
+    ColumnTo: op.ColumnTo || null,
+    Type: op.Type || null,
+    Note: op.Note || null,
+    Default: op.Default || null,
+    Nullable: op.Nullable === undefined ? null : op.Nullable,
+    Length: op.Length === undefined ? null : op.Length,
+    Precision: op.Precision === undefined ? null : op.Precision,
+    Scale: op.Scale === undefined ? null : op.Scale,
+    Computed: op.Computed === undefined ? null : op.Computed,
   };
 };
 
@@ -116,27 +116,7 @@ export function PlanBuilder() {
     const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
 
     try {
-      if (actionType === 'cleanup') {
-        const cleanupPayload = {
-          SessionId: sessionId,
-          ConnectionString: "", // Requerido por el DTO, pero el backend usará el SessionId.
-          Renames: renamesDto,
-          UseSynonyms: !!UseSynonyms,
-          UseViews: !!UseViews,
-          Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, // Añadir la bandera aquí también por si acaso
-        };
-        const response = await api.runCleanup(cleanupPayload);
-        dispatch({
-          type: 'SET_RESULTS_SUCCESS',
-          payload: {
-            sql: response.sql || null,
-            codefix: null,
-            dbLog: response.log || null,
-          },
-        });
-        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });
-      } else {
+       if (actionType === 'apply' || actionType === 'preview') {
         const isApply = actionType === 'apply';
         const runPayload = {
           SessionId: sessionId,
@@ -145,7 +125,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, // Asegurarnos de que se envía el valor del estado
+          AllowDestructive: !!AllowDestructive,
           Plan: { renames: renamesDto },
         };
         const response = await api.runRefactor(runPayload);
@@ -158,6 +138,27 @@ export function PlanBuilder() {
           },
         });
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
+      
+      } else if (actionType === 'cleanup') {
+        const cleanupPayload = {
+          SessionId: sessionId,
+          ConnectionString: "", // Requerido por el DTO
+          Renames: renamesDto,
+          UseSynonyms: !!UseSynonyms,
+          UseViews: !!UseViews,
+          Cqrs: !!Cqrs,
+          AllowDestructive: !!AllowDestructive, // Pasamos la opción aquí también
+        };
+        const response = await api.runCleanup(cleanupPayload);
+        dispatch({
+          type: 'SET_RESULTS_SUCCESS',
+          payload: {
+            sql: response.sql || null,
+            codefix: null,
+            dbLog: response.log || null,
+          },
+        });
+        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
@@ -350,7 +351,7 @@ export function PlanBuilder() {
             </Button>
             <Button 
                 onClick={() => handleAction('apply')}
-                disabled={state.results.isLoading || state.plan.length === 0}
+                disabled={state.results.isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.AllowDestructive)}
                 variant={hasDestructiveOps ? "destructive" : "default"}
                 title={hasDestructiveOps ? "Aplica el plan, incluyendo operaciones de borrado. Requiere 'Permitir Eliminaciones' habilitado." : "Aplica el plan de refactorización."}
             >
@@ -359,14 +360,14 @@ export function PlanBuilder() {
                 Aplicar Plan
             </Button>
             <Button 
-                variant={"outline"} 
+                variant={hasDestructiveOps ? "destructive" : "outline"} 
                 onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0}
-                title={"Elimina objetos de compatibilidad (sinónimos, vistas) creados en un paso anterior de 'Aplicar'."}
+                disabled={state.results.isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.AllowDestructive)}
+                title={"Elimina objetos de compatibilidad (sinónimos, vistas) y/o ejecuta operaciones destructivas."}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
-                Limpiar Objetos
+                Limpiar
             </Button>
         </CardFooter>
       </Card>
