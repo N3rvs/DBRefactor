@@ -45,22 +45,32 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
+// Helper para limpiar el prefijo 'dbo.'
+const stripSchemaPrefix = (tableName: string | undefined | null): string | undefined | null => {
+  if (!tableName) return tableName;
+  const prefix = 'dbo.';
+  if (tableName.toLowerCase().startsWith(prefix)) {
+    return tableName.substring(prefix.length);
+  }
+  return tableName;
+};
+
 // Helper para transformar a camelCase como espera el backend
-const toCamelCaseRename = (op: RenameItemDto) => ({
-    scope: op.Scope,
-    tableFrom: op.TableFrom,
-    tableTo: op.TableTo,
-    columnFrom: op.ColumnFrom,
-    columnTo: op.ColumnTo,
-    type: op.Type,
-    area: op.Area,
-    note: op.Note,
-    default: op.Default,
-    nullable: op.Nullable,
-    length: op.Length,
-    precision: op.Precision,
-    scale: op.Scale,
-    computed: op.Computed
+const toCamelCaseRename = (op: RenameItemDto): RenameItemDto => ({
+    Scope: op.Scope,
+    TableFrom: stripSchemaPrefix(op.TableFrom) || '',
+    TableTo: stripSchemaPrefix(op.TableTo),
+    ColumnFrom: op.ColumnFrom,
+    ColumnTo: op.ColumnTo,
+    Type: op.Type,
+    Area: op.Area,
+    Note: op.Note,
+    Default: op.Default,
+    Nullable: op.Nullable,
+    Length: op.Length,
+    Precision: op.Precision,
+    Scale: op.Scale,
+    Computed: op.Computed,
 });
 
 
@@ -99,8 +109,10 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     try {
-      const plainRenames: RenameItemDto[] = state.plan.map(({ id, ...rest }) => rest);
       const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
+
+      // Limpia DTOs y quita el id del cliente ANTES de enviarlos.
+      const plainRenames = state.plan.map(({ id, ...rest }) => toCamelCaseRename(rest));
 
       if (actionType === 'cleanup') {
         const response = await api.runCleanup({
@@ -123,9 +135,8 @@ export function PlanBuilder() {
       } else {
         const isApply = actionType === 'apply';
         
-        // Construye el plan con `renames` en minúsculas y las propiedades internas en camelCase.
         const runPlan = {
-          renames: plainRenames.map(toCamelCaseRename)
+          renames: plainRenames
         };
 
         const response = await api.runRefactor({
@@ -135,7 +146,7 @@ export function PlanBuilder() {
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive, // Añadido para consistencia
+          AllowDestructive: !!AllowDestructive,
           Plan: runPlan,
         });
 

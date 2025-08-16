@@ -2,17 +2,25 @@
 import { ScrollArea } from '../ui/scroll-area';
 
 interface LogPreviewTabProps {
-  log: string[] | string | null;
+  log: unknown; // Aceptar cualquier tipo de dato
 }
 
 export function LogPreviewTab({ log }: LogPreviewTabProps) {
   if (!log) return null;
 
-  const logContent = Array.isArray(log)
-    ? log.join('\n')
-    : typeof log === 'string'
-    ? log
-    : '// No log output.';
+  let logContent: string;
+
+  if (Array.isArray(log)) {
+    logContent = log.join('\n');
+  } else if (typeof log === 'string') {
+    logContent = log;
+  } else if (typeof log === 'object') {
+    // Si es un objeto (posiblemente un error), lo formateamos como JSON
+    logContent = JSON.stringify(log, null, 2);
+  } else {
+    // Para cualquier otro tipo, lo convertimos a string
+    logContent = String(log);
+  }
 
   return (
     <ScrollArea className="h-80 w-full rounded-md border">
