@@ -24,9 +24,9 @@ export function ConnectionCard() {
       return;
     }
     try {
-      const r = await connect(trimmed);     // crea la sesión (devuelve PascalCase)
-      setConnectionString('');
-      await refreshSchema(r.SessionId);     // analiza pasando el SID recién creado
+      const r = await connect(trimmed);
+      setConnectionString(''); // Limpiar la cadena de conexión de la UI
+      await refreshSchema(r.sessionId);
       toast({ title: 'Éxito', description: 'Conectado a la base de datos con éxito.' });
     } catch (err) {
       toast({

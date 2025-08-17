@@ -18,22 +18,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, Controller } from 'react-hook-form';
-import type { RenameOp, RenameItemDto } from '@/lib/types';
+import type { PlanOperation } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { useEffect, useState } from 'react';
 
 interface AddOpDialogProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  operation: RenameOp | null;
+  operation: PlanOperation | null;
 }
 
-// Usamos el DTO para el formulario, ya que el 'id' es del lado del cliente.
-type FormData = RenameItemDto;
+type FormData = Omit<PlanOperation, 'id'>;
 
-// Tipos de datos SQL comunes para el selector
 const sqlDataTypes = [
   'int', 'bigint', 'smallint', 'tinyint', 'decimal(18, 2)', 'numeric(18, 2)', 'money',
   'float', 'real',
@@ -45,7 +42,6 @@ const sqlDataTypes = [
   'Personalizado'
 ];
 
-// Helper para limpiar el prefijo 'dbo.'
 const stripSchemaPrefix = (tableName: string | undefined | null): string | undefined | null => {
   if (!tableName) return tableName;
   const prefix = 'dbo.';
@@ -55,19 +51,17 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string | undef
   return tableName;
 };
 
-
 export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) {
-  const { dispatch, state: { schema } } = useAppContext();
+  const { dispatch } = useAppContext();
   const { register, handleSubmit, control, watch, reset, setValue, formState: { errors } } = useForm<FormData>();
   
   const scope = watch('Scope');
   const typeSelection = watch('Type');
   const [isCustomType, setIsCustomType] = useState(false);
-  const [isForeignKey, setIsForeignKey] = useState(false);
 
   useEffect(() => {
     if (operation) {
-      const { id, ...dto } = operation; // Excluir id del cliente
+      const { id, ...dto } = operation;
       reset(dto);
     } else {
       reset({
@@ -80,39 +74,34 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         Note: '',
       });
     }
-    setIsForeignKey(false);
     setIsCustomType(false);
   }, [operation, reset, isOpen]);
 
   useEffect(() => {
     if (typeSelection === 'Personalizado') {
       setIsCustomType(true);
-      setValue('Type', ''); // Limpiar para que el usuario escriba
+      setValue('Type', '');
     } else {
       setIsCustomType(false);
     }
   }, [typeSelection, setValue]);
   
   const onSubmit = (data: FormData) => {
-    // Si es un tipo personalizado vacío, no se envía
     if (data.Scope === 'add-column' && isCustomType && !data.Type) {
-        // Opcional: mostrar error
         return;
     }
       
-    // Limpia el prefijo del esquema antes de enviar
-    const cleanedData = {
+    const cleanedData: PlanOperation = {
+      ...(operation || { id: '' }), // Mantener id si se está editando
       ...data,
       TableFrom: stripSchemaPrefix(data.TableFrom) || '',
       TableTo: stripSchemaPrefix(data.TableTo),
     };
 
     if (operation && operation.id) {
-      // Es una actualización
-      dispatch({ type: 'UPDATE_OPERATION', payload: { ...cleanedData, id: operation.id } });
+      dispatch({ type: 'UPDATE_OPERATION', payload: cleanedData });
     } else {
-      // Es una nueva operación
-      dispatch({ type: 'ADD_OPERATION', payload: cleanedData as RenameOp });
+      dispatch({ type: 'ADD_OPERATION', payload: cleanedData as any }); // 'id' se añade en el reducer
     }
     setIsOpen(false);
   };

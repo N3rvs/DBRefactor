@@ -3,19 +3,26 @@
 import React, { createContext, useCallback, useContext, useReducer } from 'react';
 import type { ReactNode } from 'react';
 import type {
-  RenameOp,
+  PlanOperation,
   CodeFixRunResult,
   SqlBundle,
   TableInfo,
-  GenerateOptions,
 } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
-import { analyzeSchemaBySession } from '@/lib/api';
+import { analyzeSchema } from '@/lib/api';
 import { normalizeDbSchema } from '@/lib/normalize-db-schema';
+
+// Opciones de generación, separadas de las de UI
+interface GenerationOptions {
+  useSynonyms: boolean;
+  useViews: boolean;
+  cqrs: boolean;
+  allowDestructive: boolean;
+}
 
 // ---------- STATE ----------
 export interface AppState {
-  plan: RenameOp[];
+  plan: PlanOperation[];
   results: {
     sql: SqlBundle | null;
     codefix: CodeFixRunResult | null;
@@ -28,7 +35,7 @@ export interface AppState {
     isLoading: boolean;
     error: string | null;
   };
-  options: GenerateOptions & { rootKey: string };
+  options: GenerationOptions & { rootKey: string };
 }
 
 const initialState: AppState = {
@@ -40,10 +47,10 @@ const initialState: AppState = {
 
 // ---------- ACTIONS ----------
 type Action =
-  | { type: 'ADD_OPERATION'; payload: RenameOp }
-  | { type: 'UPDATE_OPERATION'; payload: RenameOp }
+  | { type: 'ADD_OPERATION'; payload: PlanOperation }
+  | { type: 'UPDATE_OPERATION'; payload: PlanOperation }
   | { type: 'REMOVE_OPERATION'; payload: string } // id
-  | { type: 'SET_PLAN'; payload: RenameOp[] }
+  | { type: 'SET_PLAN'; payload: PlanOperation[] }
   | { type: 'SET_RESULTS_LOADING'; payload: boolean }
   | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlBundle | null; codefix: CodeFixRunResult | null; dbLog: string | string[] | null } }
   | { type: 'SET_RESULTS_ERROR'; payload: string | null }
@@ -91,8 +98,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
 type AppContextValue = {
   state: AppState;
   dispatch: React.Dispatch<Action>;
-  dbSession: DbSession;                              // connect(), disconnect(), sessionId, etc.
-  refreshSchema: (sidOverride?: string) => Promise<void>; // acepta SessionId opcional
+  dbSession: DbSession;
+  refreshSchema: (sidOverride?: string) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -111,8 +118,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await analyzeSchemaBySession({ sessionId: sid }); // camelCase
-        const tables = normalizeDbSchema(data);
+        const data = await analyzeSchema({ sessionId: sid });
+        const tables = normalizeDbSchema(data.tables);
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
@@ -134,5 +141,3 @@ export function useAppContext(): AppContextValue {
   if (!ctx) throw new Error('useAppContext debe ser usado dentro de un AppProvider');
   return ctx;
 }
-
-    

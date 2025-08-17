@@ -3,11 +3,11 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Database, ServerCrash, Table2 } from 'lucide-react';
-
+import { ChevronDown } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { AddOpDialog } from './add-op-dialog';
-import type { RenameOp } from '@/lib/types';
+import type { PlanOperation } from '@/lib/types';
 
 export function SchemaCard() {
   const { state, dbSession, refreshSchema } = useAppContext();
@@ -15,22 +15,22 @@ export function SchemaCard() {
   const { schema } = state;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingOp, setEditingOp] = useState<RenameOp | null>(null);
+  const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
 
   useEffect(() => {
     if (!sessionId) return;
     refreshSchema().catch(err => console.error('Error al analizar esquema:', err));
   }, [sessionId, refreshSchema]);
 
-  const handleAddOperation = (op: Partial<Omit<RenameOp, 'id' | 'Note'>>) => {
-    const newOperation: Partial<RenameOp> = {
+  const handleAddOperation = (op: Partial<Omit<PlanOperation, 'id' | 'Note'>>) => {
+    const newOperation: Partial<PlanOperation> = {
       ...op,
       TableTo: op.Scope === 'table' ? '' : undefined,
       ColumnFrom: op.Scope === 'column' ? op.ColumnFrom : undefined,
       ColumnTo: op.Scope?.includes('column') ? '' : undefined,
       Type: op.Scope === 'add-column' ? '' : undefined,
     };
-    setEditingOp(newOperation as RenameOp);
+    setEditingOp(newOperation as PlanOperation);
     setIsDialogOpen(true);
   };
 

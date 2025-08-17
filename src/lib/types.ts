@@ -1,32 +1,23 @@
 // types.ts
 
 // ---- Conexiones ----
-// Se mantiene PascalCase para la compatibilidad con el hook useDbSession y el schema,
-// pero se transformará a camelCase en la llamada a la API.
 export type ConnectionProps = {
   sessionId?: string;
   connectionKey?: string;
   connectionString?: string;
 };
 
-// ---- Schemas OpenAPI ----
-// Este es el tipo de datos del ESTADO INTERNO. Usa PascalCase.
-// Se convertirá a DTO en camelCase antes de enviarse.
-export type RenameOp = {
-  id: string; // id solo en cliente
-  Scope:
-    | 'table'
-    | 'column'
-    | 'add-column'
-    | 'drop-column'
-    | 'drop-table'
-    | 'drop-index';
+// ---- Entidades del Frontend (Estado Interno) ----
+// Representa una operación en la UI. Se convierte a RenameOp antes de enviar a la API.
+export type PlanOperation = {
+  id: string; // ID de cliente para la UI
+  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  Area?: 'write' | 'read' | 'both';
   TableFrom: string;
   TableTo?: string | null;
   ColumnFrom?: string | null;
   ColumnTo?: string | null;
   Type?: string | null;
-  Area?: 'write' | 'read' | 'both' | null;
   Note?: string | null;
   Default?: string | null;
   Nullable?: boolean | null;
@@ -36,38 +27,24 @@ export type RenameOp = {
   Computed?: boolean | null;
 };
 
-// Este es el DTO que se envía a la API. Usa camelCase.
-export type RenameItemDto = {
-  scope:
-    | 'table'
-    | 'column'
-    | 'add-column'
-    | 'drop-column'
-    | 'drop-table'
-    | 'drop-index';
+
+// ---- DTOs para la API (camelCase) ----
+// DTO para una operación de renombrado/refactorización.
+export type RenameOp = {
+  scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  area?: 'write' | 'read' | 'both';
   tableFrom: string;
   tableTo?: string | null;
   columnFrom?: string | null;
   columnTo?: string | null;
   type?: string | null;
-  area?: 'write' | 'read' | 'both' | null;
   note?: string | null;
-  default?: string | null;
-  nullable?: boolean | null;
-  length?: number | null;
-  precision?: number | null;
-  scale?: number | null;
-  computed?: boolean | null;
 };
 
-export type GenerateOptions = {
-  useSynonyms?: boolean;
-  useViews?: boolean;
-  cqrs?: boolean;
-  allowDestructive?: boolean;
+// DTO para el plan de refactorización.
+export type RefactorPlan = {
+  renames: RenameOp[];
 };
-
-export type RefactorPlanDto = { renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -83,16 +60,12 @@ export type SqlBundle = {
   cleanupSql?: string;
 };
 
-export type ChangedFile = { path: string; changed: boolean; }; // path, changed
+export type ChangedFile = { path: string; changed: boolean; };
 export type CodeFixRunResult = {
   filesScanned?: number;
   filesChanged?: number;
   changes?: ChangedFile[];
 };
-
-// ---- Plan (/plan) ----
-export type PlanRequest = GenerateOptions & { renames: RenameItemDto[] };
-export type PlanResponse = { sql?: SqlBundle; report?: unknown };
 
 // ---- Requests (camelCase para el body JSON) ----
 export type ConnectRequest = { connectionString: string; ttlSeconds?: number; };
@@ -103,20 +76,19 @@ export type RefactorRequest = {
   sessionId?: string;
   connectionKey?: string;
   connectionString?: string;
+  plan: RefactorPlan;
   apply: boolean;
-  rootKey?: string;
+  rootKey: string;
   useSynonyms?: boolean;
   useViews?: boolean;
   cqrs?: boolean;
-  allowDestructive?: boolean;
-  plan: RefactorPlanDto; // <--- Referencia al DTO del plan
 };
 
 export type CleanupRequest = {
   sessionId?: string;
   connectionKey?: string;
   connectionString?: string;
-  renames: RenameItemDto[];
+  renames: RenameOp[];
   useSynonyms?: boolean;
   useViews?: boolean;
   cqrs?: boolean;
@@ -126,21 +98,28 @@ export type CleanupRequest = {
 export type CodeFixRequest = {
   rootKey: string;
   apply: boolean;
-  plan: PlanResponse | { renames: RenameItemDto[] };
+  plan: RefactorPlan;
   includeGlobs?: string[];
   excludeGlobs?: string[];
 };
 
-// ---- Responses (se normalizan en el cliente) ----
-export type ConnectResponse = { SessionId: string; ExpiresAtUtc: string; }; // El hook ya maneja esto
-export type AnalyzeSchemaResponse = DbSchema;
+export type PlanRequest = {
+  renames: RenameOp[];
+  useSynonyms?: boolean;
+  useViews?: boolean;
+  cqrs?: boolean;
+};
+
+// ---- Responses (se normalizan en el cliente si es necesario) ----
+export type ConnectResponse = { sessionId: string; expiresAtUtc: string; };
+export type AnalyzeSchemaResponse = { tables: TableInfo[] };
 
 export type RefactorResponse = {
   ok?: boolean;
   apply?: boolean;
   sql?: SqlBundle;
   codefix?: CodeFixRunResult;
-  dbLog?: string | string[]; // Puede ser string o array
+  dbLog?: string | string[];
 };
 
 export type CleanupResponse = {
@@ -150,7 +129,6 @@ export type CleanupResponse = {
 };
 
 export type CodeFixResponse = CodeFixRunResult;
+export type PlanResponse = { sql: SqlBundle, report: any };
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
-
-    

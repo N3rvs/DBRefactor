@@ -38,7 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { RenameOp, RenameItemDto } from '@/lib/types';
+import type { PlanOperation, RenameOp } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
@@ -46,23 +46,17 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
-// Convierte el objeto de estado (PascalCase) a un DTO para la API (camelCase)
-const toRenameItemDto = (op: RenameOp): RenameItemDto => {
+// Convierte un objeto de operación del estado del frontend a un DTO para la API
+const toRenameOpDto = (op: PlanOperation): RenameOp => {
   return {
     scope: op.Scope,
-    area: op.Area || 'both',
-    tableFrom: op.TableFrom || '',
-    tableTo: op.TableTo || null,
-    columnFrom: op.ColumnFrom || null,
-    columnTo: op.ColumnTo || null,
-    type: op.Type || null,
-    note: op.Note || null,
-    default: op.Default || null,
-    nullable: op.Nullable === undefined ? null : op.Nullable,
-    length: op.Length === undefined ? null : op.Length,
-    precision: op.Precision === undefined ? null : op.Precision,
-    scale: op.Scale === undefined ? null : op.Scale,
-    computed: op.Computed === undefined ? null : op.Computed,
+    area: op.Area,
+    tableFrom: op.TableFrom,
+    tableTo: op.TableTo,
+    columnFrom: op.ColumnFrom,
+    columnTo: op.ColumnTo,
+    type: op.Type,
+    note: op.Note,
   };
 };
 
@@ -71,7 +65,7 @@ export function PlanBuilder() {
   const { sessionId } = dbSession;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingOp, setEditingOp] = useState<RenameOp | null>(null);
+  const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
 
@@ -85,7 +79,7 @@ export function PlanBuilder() {
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (op: RenameOp) => {
+  const handleEdit = (op: PlanOperation) => {
     setEditingOp(op);
     setIsDialogOpen(true);
   };
@@ -94,7 +88,47 @@ export function PlanBuilder() {
     dispatch({ type: 'REMOVE_OPERATION', payload: id });
   };
   
-  const handleAction = async (actionType: 'preview' | 'apply' | 'cleanup') => {
+  const handlePreview = async () => {
+     if (!sessionId) {
+      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
+      return;
+    }
+    if (state.plan.length === 0) {
+      toast({ title: 'Plan Vacío', description: 'Agregue al menos una operación al plan.' });
+      return;
+    }
+    dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
+    
+    const renamesDto = state.plan.map(toRenameOpDto);
+    const { rootKey, useSynonyms, useViews, cqrs } = state.options;
+
+    try {
+      const response = await api.runRefactor({
+        sessionId,
+        apply: false,
+        rootKey,
+        useSynonyms,
+        useViews,
+        cqrs,
+        plan: { renames: renamesDto },
+      });
+      dispatch({
+        type: 'SET_RESULTS_SUCCESS',
+        payload: {
+          sql: response.sql || null,
+          codefix: response.codefix || null,
+          dbLog: response.dbLog || null,
+        },
+      });
+      toast({ title: 'Previsualización Generada', description: 'Los resultados de la previsualización están listos.' });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
+      toast({ variant: 'destructive', title: 'Operación Fallida', description: errorMsg });
+    }
+  };
+  
+  const handleApplyAndCleanup = async () => {
     if (!sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
@@ -106,59 +140,60 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    const renamesDto = state.plan.map(toRenameItemDto);
+    const renamesDto = state.plan.map(toRenameOpDto);
     const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
+    
+    if (hasDestructiveOps && !allowDestructive) {
+      const msg = 'El plan contiene operaciones destructivas. Habilite "Permitir Eliminaciones" en las opciones.';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: msg });
+      toast({ variant: 'destructive', title: 'Acción Bloqueada', description: msg });
+      return;
+    }
 
     try {
-      if (actionType === 'apply' || actionType === 'preview') {
-        const isApply = actionType === 'apply';
-        
-        // Payload para /refactor/run, todo en camelCase
-        const runPayload = {
-          sessionId,
-          apply: isApply,
-          rootKey,
-          useSynonyms,
-          useViews,
-          cqrs,
-          allowDestructive,
-          plan: {
-            renames: renamesDto, // <--- Anidado aquí
-          },
-        };
+      // 1. Aplicar Plan
+      const applyResponse = await api.runRefactor({
+        sessionId,
+        apply: true,
+        rootKey,
+        useSynonyms,
+        useViews,
+        cqrs,
+        plan: { renames: renamesDto },
+      });
 
-        const response = await api.runRefactor(runPayload);
-        dispatch({
-          type: 'SET_RESULTS_SUCCESS',
-          payload: {
-            sql: response.sql || null,
-            codefix: response.codefix || null,
-            dbLog: response.dbLog || null,
+      toast({ title: 'Plan Aplicado', description: 'El plan principal se ejecutó correctamente. Iniciando limpieza...' });
+
+      // 2. Limpiar
+      const cleanupResponse = await api.runCleanup({
+        sessionId,
+        renames: renamesDto,
+        useSynonyms,
+        useViews,
+        cqrs,
+        allowDestructive: hasDestructiveOps, // Solo permitir borrado en cleanup si hay ops destructivas
+      });
+
+      // 3. Consolidar resultados
+      dispatch({
+        type: 'SET_RESULTS_SUCCESS',
+        payload: {
+          sql: {
+            renameSql: applyResponse.sql?.renameSql,
+            compatSql: applyResponse.sql?.compatSql,
+            cleanupSql: cleanupResponse.sql?.cleanupSql,
           },
-        });
-        toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
-      
-      } else if (actionType === 'cleanup') {
-        // Payload para /apply/cleanup, todo en camelCase y plano
-        const cleanupPayload = {
-          sessionId,
-          renames: renamesDto,
-          useSynonyms,
-          useViews,
-          cqrs,
-          allowDestructive,
-        };
-        const response = await api.runCleanup(cleanupPayload);
-        dispatch({
-          type: 'SET_RESULTS_SUCCESS',
-          payload: {
-            sql: response.sql || null,
-            codefix: null,
-            dbLog: response.log || null,
-          },
-        });
-        toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });
-      }
+          codefix: applyResponse.codefix || null,
+          dbLog: [
+            '--- APPLY LOG ---',
+            ...(Array.isArray(applyResponse.dbLog) ? applyResponse.dbLog : [applyResponse.dbLog || '']),
+            '--- CLEANUP LOG ---',
+            ...(Array.isArray(cleanupResponse.log) ? cleanupResponse.log : [cleanupResponse.log || '']),
+          ],
+        },
+      });
+
+      toast({ title: 'Proceso Completado', description: 'El plan y la limpieza se han ejecutado con éxito.' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
@@ -183,7 +218,6 @@ export function PlanBuilder() {
          return;
       }
       
-      // La acción de IA espera las claves en PascalCase como en el estado
       const plainRenames = state.plan.map(({ id, ...rest }) => rest);
       
       const aiResult = await getAiRefactoringSuggestion({
@@ -192,8 +226,7 @@ export function PlanBuilder() {
       });
 
       const newOrderedPlan = aiResult.orderedRenames.map(op => {
-        // La respuesta de la IA viene sin id, la añadimos en el reducer
-        return op as RenameOp;
+        return op as PlanOperation;
       });
 
       dispatch({ type: 'SET_PLAN', payload: newOrderedPlan });
@@ -218,7 +251,7 @@ export function PlanBuilder() {
     }
   }
 
-  const renderFrom = (op: RenameOp) => {
+  const renderFrom = (op: PlanOperation) => {
     const tableFromName = op.TableFrom || '';
     switch (op.Scope) {
       case 'table':
@@ -236,7 +269,7 @@ export function PlanBuilder() {
     }
   }
 
-  const renderTo = (op: RenameOp) => {
+  const renderTo = (op: PlanOperation) => {
      switch (op.Scope) {
       case 'table':
         return op.TableTo;
@@ -356,34 +389,23 @@ export function PlanBuilder() {
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
                 Sugerir Orden (IA)
             </Button>
-             <Button variant="outline" onClick={() => handleAction('preview')} disabled={state.results.isLoading || state.plan.length === 0}>
+             <Button variant="outline" onClick={handlePreview} disabled={state.results.isLoading || state.plan.length === 0}>
                 {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 <Play className="mr-2 h-4 w-4"/>
                 Previsualizar Plan
             </Button>
             <Button 
-                onClick={() => handleAction('apply')}
+                onClick={handleApplyAndCleanup}
                 disabled={state.results.isLoading || state.plan.length === 0}
                 variant={applyButtonVariant}
+                title="Aplica los cambios de refactorización y luego ejecuta la limpieza de objetos de compatibilidad."
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <ClipboardCheck className="mr-2 h-4 w-4"/>
-                Aplicar Plan
-            </Button>
-            <Button 
-                variant={"outline"} 
-                onClick={() => handleAction('cleanup')} 
-                disabled={state.results.isLoading || state.plan.length === 0}
-                title="Elimina objetos de compatibilidad (sinónimos, vistas) creados en el paso de 'Aplicar'."
-            >
-                 {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                 <Sparkles className="mr-2 h-4 w-4"/>
-                Limpiar Objetos de Compatibilidad
+                Aplicar y Limpiar
             </Button>
         </CardFooter>
       </Card>
     </>
   );
 }
-
-    

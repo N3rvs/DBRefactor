@@ -6,18 +6,19 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, RenameOp } from '@/lib/types';
+import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, PlanOperation } from '@/lib/types';
 import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
+import { Button } from '../ui/button';
 
 interface SchemaViewerProps {
   tables: TableInfo[];
-  onAddOperation: (op: Partial<Omit<RenameOp, 'id'>>) => void;
+  onAddOperation: (op: Partial<Omit<PlanOperation, 'id'>>) => void;
 }
 
 const fq = (t: TableInfo) => `${t.Schema}.${t.Name}`;
-const justTable = (t: TableInfo) => t.Name; // Helper para obtener solo el nombre de la tabla
+const justTable = (t: TableInfo) => t.Name;
 
 const DetailTable = <T extends { Name: string; [key: string]: any }>({
   data, columns, caption, actions,
@@ -64,8 +65,8 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
 export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   const { dispatch } = useAppContext();
 
-  const handleAddSimpleOperation = (op: Omit<RenameOp, 'id' | 'Note'>) => {
-    dispatch({ type: 'ADD_OPERATION', payload: op as RenameOp });
+  const handleAddSimpleOperation = (op: Omit<PlanOperation, 'id' | 'Note'>) => {
+    dispatch({ type: 'ADD_OPERATION', payload: op as PlanOperation });
   };
 
   const handleRenameTable = (table: TableInfo) => {
@@ -88,42 +89,26 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
     handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: justTable(table), ColumnFrom: column.Name });
   };
 
-  // helpers para evitar que el click del menú dispare el toggle del acordeón
-  const stopToggle = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-    
-    e.nativeEvent?.preventDefault?.();
-  };
+  const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
 
   return (
     <Accordion type="single" collapsible className="w-full">
       {tables.map((table) => (
         <AccordionItem value={fq(table)} key={fq(table)} className="border-b">
-          {/* ⚠️ NO usamos asChild aquí. AccordionTrigger sigue siendo un <button>. */}
-          <AccordionTrigger className="px-0">
-            {/* Contenido dentro del botón: OK, pero sin <button> internos */}
-            <div className="flex w-full items-center justify-between gap-2">
+          <AccordionTrigger asChild>
+            <div className="flex w-full items-center justify-between gap-2 py-4 font-medium transition-all hover:underline">
               <div className="flex items-center gap-4">
                 <span className="font-semibold text-base">{fq(table)}</span>
                 <Badge variant="outline">{table.Schema}</Badge>
               </div>
-
-              {/* ✅ Menú: el trigger es un <span>, no un <button> */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={stopToggle}
-                    onPointerDown={stopToggle}
-                    onKeyDown={stopToggle}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-                    aria-label="Acciones de tabla"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </span>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={stopPropagation}>
+                     <MoreHorizontal className="h-4 w-4" />
+                     <span className="sr-only">Table Actions</span>
+                  </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuContent align="end" onClick={stopPropagation}>
                   <DropdownMenuItem onClick={() => handleRenameTable(table)}>
                     <Pencil className="mr-2 h-4 w-4" />
                     Renombrar Tabla
@@ -142,6 +127,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
             </div>
           </AccordionTrigger>
 
@@ -158,19 +144,13 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
               caption="Columnas"
               actions={(column) => (
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      onClick={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-                      aria-label="Acciones de columna"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </span>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                   <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Column Actions</span>
+                      </Button>
+                   </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => handleRenameColumn(table, column)}>
                       <Pencil className="mr-2 h-4 w-4" />
                       Renombrar Columna

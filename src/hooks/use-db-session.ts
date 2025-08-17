@@ -1,4 +1,3 @@
-// hooks/use-db-session.ts
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
@@ -14,7 +13,6 @@ export type DbSession = {
   error: string | null;
  
   connect: (connectionString: string) => Promise<ConnectResponse>;
-
   disconnect: () => Promise<void>;
 };
 
@@ -24,52 +22,19 @@ export function useDbSession(): DbSession {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Restaura sesión almacenada
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const raw = localStorage.getItem(LS_KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as { sessionId?: string; expiresAtUtc?: string };
-        if (new Date(saved.expiresAtUtc || 0) > new Date()) {
-          setSessionId(saved.sessionId);
-          setExpiresAtUtc(saved.expiresAtUtc);
-        } else {
-            localStorage.removeItem(LS_KEY);
-        }
-      }
-    } catch {
-      /* noop */
-    }
-  }, []);
-
-  // Persiste cambios
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (sessionId) {
-      localStorage.setItem(LS_KEY, JSON.stringify({ sessionId, expiresAtUtc }));
-    } else {
-      localStorage.removeItem(LS_KEY);
-    }
-  }, [sessionId, expiresAtUtc]);
+  // NOTA: Se elimina la persistencia en localStorage para evitar
+  // que el usuario reutilice una cadena de conexión sensible.
+  // La sesión ahora vivirá solo en memoria del estado de React.
 
   const connect = useCallback(async (connectionString: string): Promise<ConnectResponse> => {
     setIsLoading(true);
     setError(null);
     try {
-      // ⚠️ El backend espera camelCase en el body
-      const res = await connectSession({ connectionString: connectionString });
-
-      // 🔸 El hook de API normaliza la respuesta a camelCase
-      const sid = res.SessionId || (res as any).sessionId;
-      const exp = res.ExpiresAtUtc || (res as any).expiresAtUtc;
-
-      if (!sid) throw new Error('No se obtuvo SessionId de la API.');
-
-      setSessionId(sid);
-      setExpiresAtUtc(exp);
-
-      return { SessionId: sid, ExpiresAtUtc: exp };
+      const res = await connectSession(connectionString);
+      if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
+      setSessionId(res.sessionId);
+      setExpiresAtUtc(res.expiresAtUtc);
+      return res;
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo conectar.');
       throw e;
@@ -83,12 +48,12 @@ export function useDbSession(): DbSession {
     setIsLoading(true);
     setError(null);
     try {
-      await disconnectSession({ sessionId: sessionId }); // camelCase hacia el backend
+      await disconnectSession(sessionId);
       setSessionId(undefined);
       setExpiresAtUtc(undefined);
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo desconectar.');
-      throw e;
+      // No lanzar excepción aquí para no molestar al usuario si falla la limpieza.
     } finally {
       setIsLoading(false);
     }
