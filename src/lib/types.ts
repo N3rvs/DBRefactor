@@ -4,12 +4,14 @@
 // Se mantiene PascalCase para la compatibilidad con el hook useDbSession y el schema,
 // pero se transformará a camelCase en la llamada a la API.
 export type ConnectionProps = {
-  SessionId?: string;
-  ConnectionKey?: string;
-  ConnectionString?: string;
+  sessionId?: string;
+  connectionKey?: string;
+  connectionString?: string;
 };
 
 // ---- Schemas OpenAPI ----
+// Este es el tipo de datos del ESTADO INTERNO. Usa PascalCase.
+// Se convertirá a DTO en camelCase antes de enviarse.
 export type RenameOp = {
   id: string; // id solo en cliente
   Scope:
@@ -34,16 +36,38 @@ export type RenameOp = {
   Computed?: boolean | null;
 };
 
-export type RenameItemDto = Omit<RenameOp, 'id'>;
-
-export type GenerateOptions = {
-  useSynonyms?: boolean; // camelCase
-  useViews?: boolean; // camelCase
-  cqrs?: boolean; // camelCase
-  allowDestructive?: boolean; // camelCase
+// Este es el DTO que se envía a la API. Usa camelCase.
+export type RenameItemDto = {
+  scope:
+    | 'table'
+    | 'column'
+    | 'add-column'
+    | 'drop-column'
+    | 'drop-table'
+    | 'drop-index';
+  tableFrom: string;
+  tableTo?: string | null;
+  columnFrom?: string | null;
+  columnTo?: string | null;
+  type?: string | null;
+  area?: 'write' | 'read' | 'both' | null;
+  note?: string | null;
+  default?: string | null;
+  nullable?: boolean | null;
+  length?: number | null;
+  precision?: number | null;
+  scale?: number | null;
+  computed?: boolean | null;
 };
 
-export type RefactorPlan = { renames: RenameItemDto[] }; // camelCase
+export type GenerateOptions = {
+  useSynonyms?: boolean;
+  useViews?: boolean;
+  cqrs?: boolean;
+  allowDestructive?: boolean;
+};
+
+export type RefactorPlan = { renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -54,16 +78,16 @@ export type DbSchema = { Tables: TableInfo[]; };
 
 // ---- SQL / CodeFix ----
 export type SqlBundle = {
-  renameSql?: string; // camelCase
-  compatSql?: string; // camelCase
-  cleanupSql?: string; // camelCase
+  renameSql?: string;
+  compatSql?: string;
+  cleanupSql?: string;
 };
 
-export type ChangedFile = { Path: string; Changed: boolean; };
+export type ChangedFile = { path: string; changed: boolean; }; // path, changed
 export type CodeFixRunResult = {
-  filesScanned?: number; // camelCase
-  filesChanged?: number; // camelCase
-  changes?: ChangedFile[]; // camelCase
+  filesScanned?: number;
+  filesChanged?: number;
+  changes?: ChangedFile[];
 };
 
 // ---- Plan (/plan) ----
@@ -84,7 +108,7 @@ export type RefactorRequest = {
   useSynonyms?: boolean;
   useViews?: boolean;
   cqrs?: boolean;
-  allowDestructive?: boolean; // Backend no lo usa aquí, pero lo mantenemos por consistencia
+  allowDestructive?: boolean;
   plan: RefactorPlan;
 };
 

@@ -52,24 +52,23 @@ const stripSchemaPrefix = (tableName: string | undefined | null): string => {
   return name.toLowerCase().startsWith('dbo.') ? name.substring(4) : name;
 };
 
-// Se asegura de que todas las claves existan para coincidir con el DTO del backend,
-// inicializando las opcionales a null si no están presentes.
+// Convierte el objeto de estado (PascalCase) a un DTO para la API (camelCase)
 const toRenameItemDto = (op: RenameOp): RenameItemDto => {
   return {
-    Scope: op.Scope,
-    Area: op.Area || null,
-    TableFrom: stripSchemaPrefix(op.TableFrom),
-    TableTo: stripSchemaPrefix(op.TableTo) || null,
-    ColumnFrom: op.ColumnFrom || null,
-    ColumnTo: op.ColumnTo || null,
-    Type: op.Type || null,
-    Note: op.Note || null,
-    Default: op.Default || null,
-    Nullable: op.Nullable === undefined ? null : op.Nullable,
-    Length: op.Length === undefined ? null : op.Length,
-    Precision: op.Precision === undefined ? null : op.Precision,
-    Scale: op.Scale === undefined ? null : op.Scale,
-    Computed: op.Computed === undefined ? null : op.Computed,
+    scope: op.Scope,
+    area: op.Area || 'both',
+    tableFrom: stripSchemaPrefix(op.TableFrom),
+    tableTo: stripSchemaPrefix(op.TableTo) || null,
+    columnFrom: op.ColumnFrom || null,
+    columnTo: op.ColumnTo || null,
+    type: op.Type || null,
+    note: op.Note || null,
+    default: op.Default || null,
+    nullable: op.Nullable === undefined ? null : op.Nullable,
+    length: op.Length === undefined ? null : op.Length,
+    precision: op.Precision === undefined ? null : op.Precision,
+    scale: op.Scale === undefined ? null : op.Scale,
+    computed: op.Computed === undefined ? null : op.Computed,
   };
 };
 
@@ -114,7 +113,6 @@ export function PlanBuilder() {
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
     const renamesDto = state.plan.map(toRenameItemDto);
-    // Aseguramos que las opciones se envíen en camelCase
     const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
     try {
@@ -123,19 +121,19 @@ export function PlanBuilder() {
         
         // Payload para /refactor/run, todo en camelCase
         const runPayload = {
-          sessionId: sessionId,
+          sessionId,
           apply: isApply,
           rootKey,
           useSynonyms,
           useViews,
           cqrs,
-          allowDestructive,
+          allowDestructive, // <-- Se añade aquí
           plan: {
-            renames: renamesDto, // <- renames en minúscula dentro de plan
+            renames: renamesDto,
           },
         };
 
-        const response = await api.runRefactor(runPayload as any); // Usar 'as any' para evitar error de tipo temporal
+        const response = await api.runRefactor(runPayload);
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -147,9 +145,9 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
-         // Payload para /apply/cleanup, todo en camelCase
+        // Payload para /apply/cleanup, todo en camelCase
         const cleanupPayload = {
-          sessionId: sessionId,
+          sessionId,
           renames: renamesDto,
           useSynonyms,
           useViews,
@@ -161,8 +159,8 @@ export function PlanBuilder() {
           type: 'SET_RESULTS_SUCCESS',
           payload: {
             sql: response.sql || null,
-            codefix: null, // La limpieza no devuelve correcciones de código
-            dbLog: response.log || null, // el backend devuelve 'log'
+            codefix: null,
+            dbLog: response.log || null,
           },
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });
@@ -191,6 +189,7 @@ export function PlanBuilder() {
          return;
       }
       
+      // La acción de IA espera las claves en PascalCase como en el estado
       const plainRenames = state.plan.map(({ id, ...rest }) => rest);
       
       const aiResult = await getAiRefactoringSuggestion({
@@ -199,6 +198,7 @@ export function PlanBuilder() {
       });
 
       const newOrderedPlan = aiResult.orderedRenames.map(op => {
+        // La respuesta de la IA viene sin id, la añadimos en el reducer
         return op as RenameOp;
       });
 
