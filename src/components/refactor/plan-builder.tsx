@@ -128,13 +128,13 @@ export function PlanBuilder() {
           UseSynonyms,
           UseViews,
           Cqrs,
-          AllowDestructive, // <-- AHORA SE INCLUYE CORRECTAMENTE
+          AllowDestructive,
           Plan: {
-            Renames: renamesDto, // <-- La lista está anidada y en PascalCase
+            renames: renamesDto, // <-- La clave es 'renames' en camelCase dentro de 'Plan'
           },
         };
 
-        const response = await api.runRefactor(runPayload);
+        const response = await api.runRefactor(runPayload as any); // Usar 'as any' para evitar error de tipo temporal
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
           payload: {
@@ -153,7 +153,6 @@ export function PlanBuilder() {
           UseSynonyms,
           UseViews,
           Cqrs,
-          AllowDestructive, // La limpieza también puede necesitar esto
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({

@@ -41,7 +41,8 @@ export type GenerateOptions = {
   AllowDestructive?: boolean;
 };
 
-export type RefactorPlan = { Renames: RenameItemDto[] }; // PascalCase
+// Esta es la estructura que espera /refactor/run, con 'renames' en camelCase
+export type RefactorPlan = { renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -80,7 +81,7 @@ export type RefactorRequest = ConnectionProps & GenerateOptions & {
   RootKey?: string;
 };
 
-// /apply/cleanup: Espera Renames en el nivel superior.
+// /apply/cleanup: Espera Renames en el nivel superior (plano y en PascalCase).
 export type CleanupRequest = ConnectionProps & GenerateOptions & {
   Renames: RenameItemDto[];
 };
