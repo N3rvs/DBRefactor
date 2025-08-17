@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, PlanOperation } from '@/lib/types';
-import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
 import { Button } from '../ui/button';
@@ -74,7 +74,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
 
   const handleDropTable = (table: TableInfo) => {
-    handleAddSimpleOperation({ Scope: 'drop-table', TableFrom: justTable(table) });
+    handleAddSimpleOperation({ scope: 'drop-table', tableFrom: justTable(table) } as any);
   };
 
   const handleAddColumn = (table: TableInfo) => {
@@ -86,7 +86,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
 
   const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
-    handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: justTable(table), ColumnFrom: column.Name });
+    handleAddSimpleOperation({ scope: 'drop-column', tableFrom: justTable(table), columnFrom: column.Name } as any);
   };
 
   const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -96,8 +96,8 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
       {tables.map((table) => (
         <AccordionItem value={fq(table)} key={fq(table)} className="border-b">
           <AccordionTrigger asChild>
-            <div className="flex w-full items-center justify-between gap-2 py-4 font-medium transition-all hover:underline">
-              <div className="flex items-center gap-4">
+            <div className="flex w-full items-center justify-between gap-2 py-4 font-medium transition-all hover:underline cursor-pointer">
+              <div className="flex flex-1 items-center gap-4">
                 <span className="font-semibold text-base">{fq(table)}</span>
                 <Badge variant="outline">{table.Schema}</Badge>
               </div>

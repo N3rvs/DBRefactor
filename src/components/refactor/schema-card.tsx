@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Database, ServerCrash, Table2 } from 'lucide-react';
-import { ChevronDown } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { AddOpDialog } from './add-op-dialog';
