@@ -127,9 +127,9 @@ export function PlanBuilder() {
           useSynonyms,
           useViews,
           cqrs,
-          allowDestructive, // <-- Se añade aquí
+          allowDestructive,
           plan: {
-            renames: renamesDto,
+            renames: renamesDto, // <--- Anidado aquí
           },
         };
 
@@ -145,7 +145,7 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
-        // Payload para /apply/cleanup, todo en camelCase
+        // Payload para /apply/cleanup, todo en camelCase y plano
         const cleanupPayload = {
           sessionId,
           renames: renamesDto,
