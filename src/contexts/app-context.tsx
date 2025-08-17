@@ -7,6 +7,8 @@ import type {
   CodeFixRunResult,
   SqlBundle,
   TableInfo,
+  CleanupRequest,
+  RefactorRequest
 } from '@/lib/types';
 import { useDbSession, type DbSession } from '@/hooks/use-db-session';
 import { analyzeSchema } from '@/lib/api';
@@ -104,7 +106,7 @@ type AppContextValue = {
   state: AppState;
   dispatch: React.Dispatch<Action>;
   dbSession: DbSession;
-  refreshSchema: (sidOverride?: string) => Promise<void>;
+  refreshSchema: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -115,22 +117,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const dbSession = useDbSession();
 
   const refreshSchema = useCallback(
-    async (sidOverride?: string) => {
-      const sid = sidOverride ?? dbSession.sessionId;
-      if (!sid) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay SessionId para analizar.' });
+    async () => {
+      const cs = state.connectionString;
+      if (!cs) {
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay cadena de conexión para analizar.' });
         return;
       }
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await analyzeSchema({ sessionId: sid });
-        const tables = normalizeDbSchema({ tables: data.tables }); 
+        const data = await analyzeSchema({ connectionString: cs });
+        const tables = normalizeDbSchema(data); 
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
       }
     },
-    [dbSession.sessionId]
+    [state.connectionString]
   );
 
   return (

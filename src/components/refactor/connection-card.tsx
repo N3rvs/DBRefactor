@@ -24,11 +24,12 @@ export function ConnectionCard() {
       return;
     }
     try {
-      const r = await connect(trimmed);
-      dispatch({ type: 'SET_CONNECTION_STRING', payload: trimmed }); // Guardar en el estado
-      setConnectionString(''); // Limpiar la cadena de conexión de la UI
-      await refreshSchema(r.sessionId);
+      await connect(trimmed);
+      dispatch({ type: 'SET_CONNECTION_STRING', payload: trimmed });
+      // La actualización del esquema se dispara desde el useEffect en SchemaCard
+      // para asegurar que el estado de connectionString esté actualizado.
       toast({ title: 'Éxito', description: 'Conectado a la base de datos con éxito.' });
+      setConnectionString(''); // Limpiar la cadena de conexión de la UI
     } catch (err) {
       toast({
         variant: 'destructive',
