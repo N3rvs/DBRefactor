@@ -34,10 +34,10 @@ const InfoTooltip = ({ content }: { content: string }) => (
 
 export function RefactorOptions() {
   const { state, dispatch } = useAppContext();
-  const { UseSynonyms, UseViews, Cqrs, AllowDestructive } = state.options;
+  const { useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
   const handleOptionChange = (
-    option: 'UseSynonyms' | 'UseViews' | 'Cqrs' | 'AllowDestructive',
+    option: 'useSynonyms' | 'useViews' | 'cqrs' | 'allowDestructive',
     value: boolean
   ) => {
     dispatch({ type: 'SET_OPTION', payload: { key: option, value } });
@@ -66,8 +66,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useSynonyms"
-              checked={!!UseSynonyms}
-              onCheckedChange={(v) => handleOptionChange('UseSynonyms', v)}
+              checked={!!useSynonyms}
+              onCheckedChange={(v) => handleOptionChange('useSynonyms', v)}
             />
           </div>
 
@@ -78,8 +78,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useViews"
-              checked={!!UseViews}
-              onCheckedChange={(v) => handleOptionChange('UseViews', v)}
+              checked={!!useViews}
+              onCheckedChange={(v) => handleOptionChange('useViews', v)}
             />
           </div>
 
@@ -91,8 +91,8 @@ export function RefactorOptions() {
             </div>
             <Switch
               id="useCqrs"
-              checked={!!Cqrs}
-              onCheckedChange={(v) => handleOptionChange('Cqrs', v)}
+              checked={!!cqrs}
+              onCheckedChange={(v) => handleOptionChange('cqrs', v)}
             />
           </div>
 
@@ -105,12 +105,12 @@ export function RefactorOptions() {
                 <AlertTriangle className="h-4 w-4" />
                 Permitir Eliminaciones
               </Label>
-              <InfoTooltip content="Habilita la ejecución de operaciones DROP (eliminar tablas, columnas, etc.) durante la fase de limpieza. Esta acción es irreversible." />
+              <InfoTooltip content="Habilita la ejecución de operaciones DROP (eliminar tablas, columnas, etc.). Esta acción es irreversible." />
             </div>
             <Switch
               id="allowDestructive"
-              checked={!!AllowDestructive}
-              onCheckedChange={(v) => handleOptionChange('AllowDestructive', v)}
+              checked={!!allowDestructive}
+              onCheckedChange={(v) => handleOptionChange('allowDestructive', v)}
             />
           </div>
         </CardContent>

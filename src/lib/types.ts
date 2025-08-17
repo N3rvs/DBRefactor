@@ -1,6 +1,8 @@
 // types.ts
 
 // ---- Conexiones ----
+// Se mantiene PascalCase para la compatibilidad con el hook useDbSession y el schema,
+// pero se transformará a camelCase en la llamada a la API.
 export type ConnectionProps = {
   SessionId?: string;
   ConnectionKey?: string;
@@ -16,7 +18,7 @@ export type RenameOp = {
     | 'add-column'
     | 'drop-column'
     | 'drop-table'
-    | 'drop-index'; // usamos ColumnFrom para el nombre del índice
+    | 'drop-index';
   TableFrom: string;
   TableTo?: string | null;
   ColumnFrom?: string | null;
@@ -35,14 +37,13 @@ export type RenameOp = {
 export type RenameItemDto = Omit<RenameOp, 'id'>;
 
 export type GenerateOptions = {
-  UseSynonyms?: boolean;
-  UseViews?: boolean;
-  Cqrs?: boolean;
-  AllowDestructive?: boolean;
+  useSynonyms?: boolean; // camelCase
+  useViews?: boolean; // camelCase
+  cqrs?: boolean; // camelCase
+  allowDestructive?: boolean; // camelCase
 };
 
-// Esta es la estructura que espera /refactor/run, con 'renames' en camelCase
-export type RefactorPlan = { renames: RenameItemDto[] };
+export type RefactorPlan = { renames: RenameItemDto[] }; // camelCase
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -53,53 +54,63 @@ export type DbSchema = { Tables: TableInfo[]; };
 
 // ---- SQL / CodeFix ----
 export type SqlBundle = {
-  RenameSql?: string;
-  CompatSql?: string;
-  CleanupSql?: string;
+  renameSql?: string; // camelCase
+  compatSql?: string; // camelCase
+  cleanupSql?: string; // camelCase
 };
 
 export type ChangedFile = { Path: string; Changed: boolean; };
 export type CodeFixRunResult = {
-  FilesScanned?: number;
-  FilesChanged?: number;
-  Changes?: ChangedFile[];
+  filesScanned?: number; // camelCase
+  filesChanged?: number; // camelCase
+  changes?: ChangedFile[]; // camelCase
 };
 
 // ---- Plan (/plan) ----
-export type PlanRequest = GenerateOptions & { Renames: RenameItemDto[] };
-export type PlanResponse = { sql?: SqlBundle; report?: unknown }; // PlanResponseDto en el backend
+export type PlanRequest = GenerateOptions & { renames: RenameItemDto[] };
+export type PlanResponse = { sql?: SqlBundle; report?: unknown };
 
-// ---- Requests ----
-export type ConnectRequest = { ConnectionString: string; TtlSeconds?: number; };
-export type DisconnectRequest = { SessionId: string; };
-export type AnalyzeSchemaRequest = ConnectionProps;
+// ---- Requests (camelCase para el body JSON) ----
+export type ConnectRequest = { connectionString: string; ttlSeconds?: number; };
+export type DisconnectRequest = { sessionId: string; };
+export type AnalyzeSchemaRequest = { sessionId?: string; connectionKey?: string; connectionString?: string; };
 
-// /refactor/run: Espera un objeto `Plan` anidado.
-export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Plan: RefactorPlan;
-  Apply: boolean;
-  RootKey?: string;
+export type RefactorRequest = {
+  sessionId?: string;
+  connectionKey?: string;
+  connectionString?: string;
+  apply: boolean;
+  rootKey?: string;
+  useSynonyms?: boolean;
+  useViews?: boolean;
+  cqrs?: boolean;
+  allowDestructive?: boolean; // Backend no lo usa aquí, pero lo mantenemos por consistencia
+  plan: RefactorPlan;
 };
 
-// /apply/cleanup: Espera Renames en el nivel superior (plano y en PascalCase).
-export type CleanupRequest = ConnectionProps & GenerateOptions & {
-  Renames: RenameItemDto[];
+export type CleanupRequest = {
+  sessionId?: string;
+  connectionKey?: string;
+  connectionString?: string;
+  renames: RenameItemDto[];
+  useSynonyms?: boolean;
+  useViews?: boolean;
+  cqrs?: boolean;
+  allowDestructive?: boolean;
 };
 
-// Puede aceptar el plan completo de /plan o solo {Renames} según implementación
 export type CodeFixRequest = {
-  RootKey: string;
-  Apply: boolean;
-  Plan: PlanResponse | { Renames: RenameItemDto[] }; // Acepta el plan con PascalCase
-  IncludeGlobs?: string[];
-  ExcludeGlobs?: string[];
+  rootKey: string;
+  apply: boolean;
+  plan: PlanResponse | { renames: RenameItemDto[] };
+  includeGlobs?: string[];
+  excludeGlobs?: string[];
 };
 
-// ---- Responses ----
-export type ConnectResponse = { SessionId: string; ExpiresAtUtc: string; };
+// ---- Responses (se normalizan en el cliente) ----
+export type ConnectResponse = { SessionId: string; ExpiresAtUtc: string; }; // El hook ya maneja esto
 export type AnalyzeSchemaResponse = DbSchema;
 
-// El shape exacto de /refactor/run puede variar -> lo dejamos laxo
 export type RefactorResponse = {
   ok?: boolean;
   apply?: boolean;
@@ -114,7 +125,6 @@ export type CleanupResponse = {
   sql?: SqlBundle;
 };
 
-// /codefix/run devuelve CodeFixRunResult (sin "ok")
 export type CodeFixResponse = CodeFixRunResult;
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };

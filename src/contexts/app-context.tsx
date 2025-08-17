@@ -35,7 +35,7 @@ const initialState: AppState = {
   plan: [],
   results: { sql: null, codefix: null, dbLog: null, isLoading: false, error: null },
   schema: { tables: null, isLoading: false, error: null },
-  options: { rootKey: 'SOLUTION', UseSynonyms: true, UseViews: true, Cqrs: false, AllowDestructive: false },
+  options: { rootKey: 'SOLUTION', useSynonyms: true, useViews: true, cqrs: false, allowDestructive: false },
 };
 
 // ---------- ACTIONS ----------
@@ -111,7 +111,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await analyzeSchemaBySession({ SessionId: sid }); // PascalCase
+        const data = await analyzeSchemaBySession({ sessionId: sid }); // camelCase
         const tables = normalizeDbSchema(data);
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {

@@ -48,7 +48,8 @@ async function fetchApi<T>(
         try {
           errorData = JSON.parse(responseText);
           if (typeof errorData === 'object' && errorData !== null) {
-            errorData.message = errorData.message || errorData.title || errorData.detail || 'Error en la respuesta de la API.';
+            // El backend puede devolver 'error' o 'title'
+            errorData.message = errorData.message || errorData.error || errorData.title || errorData.detail || 'Error en la respuesta de la API.';
           } else {
              errorData = { message: responseText || 'Error en la respuesta de la API.' };
           }
@@ -68,9 +69,19 @@ async function fetchApi<T>(
     
     // Para otras respuestas OK, intentar parsear JSON
     const responseText = await response.text();
-    // Algunas respuestas como disconnect pueden devolver '{"ok":true}'
     if (responseText) {
-      return JSON.parse(responseText);
+      // Intentamos normalizar las claves de respuesta a camelCase si es un objeto
+      const parsed = JSON.parse(responseText);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        const camelCasedResponse: { [key: string]: any } = {};
+        for (const key in parsed) {
+          if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+            camelCasedResponse[key.charAt(0).toLowerCase() + key.slice(1)] = parsed[key];
+          }
+        }
+        return camelCasedResponse as T;
+      }
+      return parsed;
     }
     return { ok: true } as T;
 
@@ -88,24 +99,27 @@ async function fetchApi<T>(
 
 
 export const connectSession = (body: ConnectRequest) => {
+  // El backend espera connectionString, no ConnectionString
   return fetchApi<ConnectResponse>('/session/connect', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify({ connectionString: body.connectionString }),
   });
 };
 
 export const disconnectSession = (body: DisconnectRequest) => {
   return fetchApi<void>('/session/disconnect', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(body), // sessionId ya es camelCase
   });
 };
 
 export const analyzeSchemaBySession = (body: AnalyzeSchemaRequest) => {
-  return fetchApi<AnalyzeSchemaResponse>('/analyze/schema', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+    // El hook se encarga de pasar el sessionId.
+    const payload = { sessionId: body.sessionId };
+    return fetchApi<AnalyzeSchemaResponse>('/analyze/schema', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+    });
 };
 
 export const runRefactor = (body: RefactorRequest) => {
@@ -135,5 +149,3 @@ export const createPlan = (body: PlanRequest) => {
     body: JSON.stringify(body),
   });
 };
-
-    

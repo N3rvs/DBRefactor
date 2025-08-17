@@ -31,8 +31,12 @@ export function useDbSession(): DbSession {
       const raw = localStorage.getItem(LS_KEY);
       if (raw) {
         const saved = JSON.parse(raw) as { sessionId?: string; expiresAtUtc?: string };
-        setSessionId(saved.sessionId);
-        setExpiresAtUtc(saved.expiresAtUtc);
+        if (new Date(saved.expiresAtUtc || 0) > new Date()) {
+          setSessionId(saved.sessionId);
+          setExpiresAtUtc(saved.expiresAtUtc);
+        } else {
+            localStorage.removeItem(LS_KEY);
+        }
       }
     } catch {
       /* noop */
@@ -53,21 +57,19 @@ export function useDbSession(): DbSession {
     setIsLoading(true);
     setError(null);
     try {
-      // ⚠️ El backend espera PascalCase en el body
-      const res = await connectSession({ ConnectionString: connectionString });
+      // ⚠️ El backend espera camelCase en el body
+      const res = await connectSession({ connectionString: connectionString });
 
-      // 🔸 Normaliza: acepta camelCase o PascalCase y devuelve siempre PascalCase
-      const SessionId = (res as any).SessionId ?? (res as any).sessionId;
-      const ExpiresAtUtc = (res as any).ExpiresAtUtc ?? (res as any).expiresAtUtc;
+      // 🔸 El hook de API normaliza la respuesta a camelCase
+      const sid = res.SessionId || (res as any).sessionId;
+      const exp = res.ExpiresAtUtc || (res as any).expiresAtUtc;
 
-      if (!SessionId) throw new Error('No se obtuvo SessionId de la API.');
+      if (!sid) throw new Error('No se obtuvo SessionId de la API.');
 
-      // Guarda en estado interno (camelCase)
-      setSessionId(SessionId);
-      setExpiresAtUtc(ExpiresAtUtc);
+      setSessionId(sid);
+      setExpiresAtUtc(exp);
 
-      // Devuelve en el shape que espera tu UI (PascalCase)
-      return { SessionId, ExpiresAtUtc };
+      return { SessionId: sid, ExpiresAtUtc: exp };
     } catch (e: any) {
       setError(e?.message ?? 'No se pudo conectar.');
       throw e;
@@ -81,7 +83,7 @@ export function useDbSession(): DbSession {
     setIsLoading(true);
     setError(null);
     try {
-      await disconnectSession({ SessionId: sessionId }); // PascalCase hacia el backend
+      await disconnectSession({ sessionId: sessionId }); // camelCase hacia el backend
       setSessionId(undefined);
       setExpiresAtUtc(undefined);
     } catch (e: any) {

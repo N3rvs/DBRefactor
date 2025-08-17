@@ -41,7 +41,7 @@ export function ResultPanel() {
         ) : results.error ? (
           <div className="text-destructive p-4 border border-destructive/50 rounded-md bg-destructive/10">
             <h4 className="font-bold">Error</h4>
-            <p className="font-mono text-sm">{results.error}</p>
+            <pre className="font-mono text-sm whitespace-pre-wrap">{results.error}</pre>
           </div>
         ) : !hasResults ? (
           <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">

@@ -114,23 +114,24 @@ export function PlanBuilder() {
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
     const renamesDto = state.plan.map(toRenameItemDto);
-    const { UseSynonyms, UseViews, Cqrs, AllowDestructive, rootKey } = state.options;
+    // Aseguramos que las opciones se envíen en camelCase
+    const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
     try {
       if (actionType === 'apply' || actionType === 'preview') {
         const isApply = actionType === 'apply';
         
-        // Payload para /refactor/run, que espera un objeto Plan anidado.
+        // Payload para /refactor/run, todo en camelCase
         const runPayload = {
-          SessionId: sessionId,
-          Apply: isApply,
-          RootKey: rootKey,
-          UseSynonyms,
-          UseViews,
-          Cqrs,
-          AllowDestructive,
-          Plan: {
-            renames: renamesDto, // <-- La clave es 'renames' en camelCase dentro de 'Plan'
+          sessionId: sessionId,
+          apply: isApply,
+          rootKey,
+          useSynonyms,
+          useViews,
+          cqrs,
+          allowDestructive,
+          plan: {
+            renames: renamesDto, // <- renames en minúscula dentro de plan
           },
         };
 
@@ -146,13 +147,14 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
-         // Payload para /apply/cleanup, que espera Renames en el nivel superior (plano).
+         // Payload para /apply/cleanup, todo en camelCase
         const cleanupPayload = {
-          SessionId: sessionId,
-          Renames: renamesDto,
-          UseSynonyms,
-          UseViews,
-          Cqrs,
+          sessionId: sessionId,
+          renames: renamesDto,
+          useSynonyms,
+          useViews,
+          cqrs,
+          allowDestructive,
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -160,7 +162,7 @@ export function PlanBuilder() {
           payload: {
             sql: response.sql || null,
             codefix: null, // La limpieza no devuelve correcciones de código
-            dbLog: response.log || null,
+            dbLog: response.log || null, // el backend devuelve 'log'
           },
         });
         toast({ title: 'Limpieza Completada', description: 'Los objetos de compatibilidad han sido procesados.' });

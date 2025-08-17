@@ -14,10 +14,8 @@ export function SqlPreviewTab({ sql }: SqlPreviewTabProps) {
 
   if (!sql) return null;
 
-  // El backend devuelve las claves en PascalCase, nos aseguramos de leerlas así.
-  const renameSql = (sql as any).renameSql || sql.RenameSql;
-  const compatSql = (sql as any).compatSql || sql.CompatSql;
-  const cleanupSql = (sql as any).cleanupSql || sql.CleanupSql;
+  // Las claves de la respuesta ya vienen en camelCase desde la capa de API.
+  const { renameSql, compatSql, cleanupSql } = sql;
 
   const handleCopy = (text: string | undefined, name: string) => {
     if (!text) return;
