@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useCallback, useContext, useReducer } from 'react';
@@ -130,6 +131,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+        // Limpiar estado en caso de error para evitar inconsistencias
+        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] });
+        dispatch({ type: 'SET_CONNECTION_STRING', payload: null });
       }
     },
     [state.connectionString]
