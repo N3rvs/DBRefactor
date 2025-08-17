@@ -69,7 +69,7 @@ export function PlanBuilder() {
   const [aiRationale, setAiRationale] = useState<string | null>(null);
 
   const hasDestructiveOps = useMemo(
-    () => state.plan.some(op => op.Scope.startsWith('drop-')),
+    () => state.plan.some(op => op.Scope && op.Scope.startsWith('drop-')),
     [state.plan]
   );
 

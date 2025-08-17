@@ -74,7 +74,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
 
   const handleDropTable = (table: TableInfo) => {
-    handleAddSimpleOperation({ scope: 'drop-table', tableFrom: justTable(table) } as any);
+    handleAddSimpleOperation({ Scope: 'drop-table', TableFrom: justTable(table) } as any);
   };
 
   const handleAddColumn = (table: TableInfo) => {
@@ -86,7 +86,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
   };
 
   const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
-    handleAddSimpleOperation({ scope: 'drop-column', tableFrom: justTable(table), columnFrom: column.Name } as any);
+    handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: justTable(table), ColumnFrom: column.Name } as any);
   };
 
   const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
