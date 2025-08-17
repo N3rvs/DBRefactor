@@ -46,8 +46,7 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
-// Convierte un objeto de operación del estado del frontend a un DTO para la API
-const toRenameOpDto = (op: PlanOperation): RenameOp => {
+const toRenameItemDto = (op: PlanOperation): RenameOp => {
   return {
     scope: op.Scope,
     area: op.Area,
@@ -99,7 +98,7 @@ export function PlanBuilder() {
     }
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    const renamesDto = state.plan.map(toRenameOpDto);
+    const renamesDto = state.plan.map(toRenameItemDto);
     const { rootKey, useSynonyms, useViews, cqrs } = state.options;
 
     try {
@@ -129,7 +128,7 @@ export function PlanBuilder() {
   };
   
   const handleApplyAndCleanup = async () => {
-    if (!sessionId) {
+    if (!sessionId || !state.connectionString) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -140,7 +139,7 @@ export function PlanBuilder() {
 
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    const renamesDto = state.plan.map(toRenameOpDto);
+    const renamesDto = state.plan.map(toRenameItemDto);
     const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
     
     if (hasDestructiveOps && !allowDestructive) {
@@ -167,11 +166,12 @@ export function PlanBuilder() {
       // 2. Limpiar (DROP + Fase 2 de renames)
       const cleanupResponse = await api.runCleanup({
         sessionId,
+        connectionString: state.connectionString, // Enviar connectionString
         renames: renamesDto,
         useSynonyms,
         useViews,
         cqrs,
-        allowDestructive: allowDestructive, // Pasar el flag
+        allowDestructive: allowDestructive,
       });
 
       // 3. Consolidar resultados en la UI

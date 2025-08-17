@@ -25,6 +25,7 @@ export function ConnectionCard() {
     }
     try {
       const r = await connect(trimmed);
+      dispatch({ type: 'SET_CONNECTION_STRING', payload: trimmed }); // Guardar en el estado
       setConnectionString(''); // Limpiar la cadena de conexión de la UI
       await refreshSchema(r.sessionId);
       toast({ title: 'Éxito', description: 'Conectado a la base de datos con éxito.' });
@@ -42,6 +43,7 @@ export function ConnectionCard() {
     try {
       await disconnect();
       dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] }); // limpia esquema
+      dispatch({ type: 'SET_CONNECTION_STRING', payload: null }); // Limpiar del estado
       toast({ title: 'Éxito', description: 'Desconectado de la base de datos.' });
     } catch (err) {
       toast({

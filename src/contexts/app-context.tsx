@@ -36,6 +36,7 @@ export interface AppState {
     error: string | null;
   };
   options: GenerationOptions & { rootKey: string };
+  connectionString: string | null; // Guardar la cadena de conexión en el estado
 }
 
 const initialState: AppState = {
@@ -43,6 +44,7 @@ const initialState: AppState = {
   results: { sql: null, codefix: null, dbLog: null, isLoading: false, error: null },
   schema: { tables: null, isLoading: false, error: null },
   options: { rootKey: 'SOLUTION', useSynonyms: true, useViews: true, cqrs: false, allowDestructive: false },
+  connectionString: null,
 };
 
 // ---------- ACTIONS ----------
@@ -58,7 +60,8 @@ type Action =
   | { type: 'SET_SCHEMA_LOADING'; payload: boolean }
   | { type: 'SET_SCHEMA_SUCCESS'; payload: TableInfo[] }
   | { type: 'SET_SCHEMA_ERROR'; payload: string | null }
-  | { type: 'SET_OPTION'; payload: { key: keyof AppState['options']; value: any } };
+  | { type: 'SET_OPTION'; payload: { key: keyof AppState['options']; value: any } }
+  | { type: 'SET_CONNECTION_STRING'; payload: string | null };
 
 // ---------- REDUCER ----------
 const appReducer = (state: AppState, action: Action): AppState => {
@@ -89,6 +92,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
       return { ...state, schema: { tables: null, isLoading: false, error: action.payload } };
     case 'SET_OPTION':
       return { ...state, options: { ...state.options, [action.payload.key]: action.payload.value } };
+    case 'SET_CONNECTION_STRING':
+      return { ...state, connectionString: action.payload };
     default:
       return state;
   }
@@ -119,7 +124,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
         const data = await analyzeSchema({ sessionId: sid });
-        // La normalización ahora ocurre dentro del cliente API, pero mantenemos esto por si acaso
         const tables = normalizeDbSchema({ tables: data.tables }); 
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
