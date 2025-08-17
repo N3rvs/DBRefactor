@@ -29,6 +29,7 @@ import {
   Play,
   ClipboardCheck,
   Sparkles,
+  AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -118,6 +119,8 @@ export function PlanBuilder() {
     try {
       if (actionType === 'apply' || actionType === 'preview') {
         const isApply = actionType === 'apply';
+        
+        // Payload para /refactor/run, que espera un objeto Plan anidado
         const runPayload = {
           SessionId: sessionId,
           Apply: isApply,
@@ -126,7 +129,10 @@ export function PlanBuilder() {
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
           AllowDestructive: !!AllowDestructive,
-          Renames: renamesDto,
+          // El backend espera `Plan: { Renames: [...] }` con PascalCase
+          Plan: {
+            Renames: renamesDto,
+          },
         };
         const response = await api.runRefactor(runPayload);
         dispatch({
@@ -140,15 +146,14 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
-        // La limpieza no ejecuta operaciones destructivas, solo de compatibilidad
+         // Payload para /apply/cleanup, que espera Renames en el nivel superior (plano)
         const cleanupPayload = {
           SessionId: sessionId,
-          ConnectionString: "", // El backend puede necesitarlo aunque esté vacío
           Renames: renamesDto,
           UseSynonyms: !!UseSynonyms,
           UseViews: !!UseViews,
           Cqrs: !!Cqrs,
-          AllowDestructive: false, // La limpieza no debe ser destructiva
+          AllowDestructive: !!AllowDestructive,
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -252,6 +257,8 @@ export function PlanBuilder() {
     }
   }
 
+  // Las operaciones destructivas ahora se manejan con el botón "Aplicar"
+  const applyButtonVariant = hasDestructiveOps ? "destructive" : "default";
 
   return (
     <>
@@ -339,6 +346,15 @@ export function PlanBuilder() {
               </TableBody>
             </Table>
           </div>
+          {hasDestructiveOps && (
+            <div className="mt-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-3">
+              <AlertTriangle className="h-5 w-5" />
+              <div>
+                <p className="font-semibold">El plan contiene operaciones destructivas.</p>
+                <p className="text-xs">Asegúrese de que "Permitir Eliminaciones" esté habilitado en las opciones antes de aplicar.</p>
+              </div>
+            </div>
+          )}
         </CardContent>
         <CardFooter className="flex flex-wrap justify-end gap-2">
             <Button variant="outline" onClick={handleSuggestOrder} disabled={isAiLoading || state.plan.length < 2 || state.results.isLoading}>
@@ -353,7 +369,7 @@ export function PlanBuilder() {
             <Button 
                 onClick={() => handleAction('apply')}
                 disabled={state.results.isLoading || state.plan.length === 0}
-                variant={hasDestructiveOps ? "destructive" : "default"}
+                variant={applyButtonVariant}
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <ClipboardCheck className="mr-2 h-4 w-4"/>
@@ -367,12 +383,10 @@ export function PlanBuilder() {
             >
                  {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                  <Sparkles className="mr-2 h-4 w-4"/>
-                Limpiar
+                Limpiar Objetos de Compatibilidad
             </Button>
         </CardFooter>
       </Card>
     </>
   );
 }
-
-    

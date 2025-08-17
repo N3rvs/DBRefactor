@@ -73,14 +73,14 @@ export type ConnectRequest = { ConnectionString: string; TtlSeconds?: number; };
 export type DisconnectRequest = { SessionId: string; };
 export type AnalyzeSchemaRequest = ConnectionProps;
 
-// /refactor/run: La lista de Renames va en el nivel superior
+// /refactor/run: Espera un objeto `Plan` anidado.
 export type RefactorRequest = ConnectionProps & GenerateOptions & {
-  Renames: RenameItemDto[];
+  Plan: RefactorPlan;
   Apply: boolean;
   RootKey?: string;
 };
 
-// /apply/cleanup: acepta misma resolución de conexión que el resto
+// /apply/cleanup: Espera Renames en el nivel superior.
 export type CleanupRequest = ConnectionProps & GenerateOptions & {
   Renames: RenameItemDto[];
 };
@@ -117,5 +117,3 @@ export type CleanupResponse = {
 export type CodeFixResponse = CodeFixRunResult;
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
-
-    
