@@ -14,7 +14,7 @@ export function LogPreviewTab({ log }: LogPreviewTabProps) {
     logContent = log.join('\n');
   } else if (typeof log === 'string') {
     logContent = log;
-  } else if (typeof log === 'object') {
+  } else if (typeof log === 'object' && log !== null) {
     // Si es un objeto (posiblemente un error), lo formateamos como JSON
     logContent = JSON.stringify(log, null, 2);
   } else {
@@ -30,3 +30,5 @@ export function LogPreviewTab({ log }: LogPreviewTabProps) {
     </ScrollArea>
   );
 }
+
+    

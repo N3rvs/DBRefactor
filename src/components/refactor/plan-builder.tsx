@@ -46,19 +46,13 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
-const stripSchemaPrefix = (tableName: string | undefined | null): string => {
-  if (!tableName) return '';
-  const name = String(tableName);
-  return name.toLowerCase().startsWith('dbo.') ? name.substring(4) : name;
-};
-
 // Convierte el objeto de estado (PascalCase) a un DTO para la API (camelCase)
 const toRenameItemDto = (op: RenameOp): RenameItemDto => {
   return {
     scope: op.Scope,
     area: op.Area || 'both',
-    tableFrom: stripSchemaPrefix(op.TableFrom),
-    tableTo: stripSchemaPrefix(op.TableTo) || null,
+    tableFrom: op.TableFrom || '',
+    tableTo: op.TableTo || null,
     columnFrom: op.ColumnFrom || null,
     columnTo: op.ColumnTo || null,
     type: op.Type || null,
@@ -225,15 +219,16 @@ export function PlanBuilder() {
   }
 
   const renderFrom = (op: RenameOp) => {
+    const tableFromName = op.TableFrom || '';
     switch (op.Scope) {
       case 'table':
       case 'drop-table':
-        return op.TableFrom;
+        return tableFromName;
       case 'column':
       case 'drop-column':
-        return `${op.TableFrom}.${op.ColumnFrom}`;
+        return `${tableFromName}.${op.ColumnFrom}`;
       case 'add-column':
-        return op.TableFrom;
+        return tableFromName;
       case 'drop-index':
         return op.ColumnFrom; // Usando columnFrom para el nombre del índice
       default:
@@ -390,3 +385,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    

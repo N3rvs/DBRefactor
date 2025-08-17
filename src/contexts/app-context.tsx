@@ -19,7 +19,7 @@ export interface AppState {
   results: {
     sql: SqlBundle | null;
     codefix: CodeFixRunResult | null;
-    dbLog: string[] | null;
+    dbLog: string | string[] | null;
     isLoading: boolean;
     error: string | null;
   };
@@ -45,7 +45,7 @@ type Action =
   | { type: 'REMOVE_OPERATION'; payload: string } // id
   | { type: 'SET_PLAN'; payload: RenameOp[] }
   | { type: 'SET_RESULTS_LOADING'; payload: boolean }
-  | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlBundle | null; codefix: CodeFixRunResult | null; dbLog: string[] | null } }
+  | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlBundle | null; codefix: CodeFixRunResult | null; dbLog: string | string[] | null } }
   | { type: 'SET_RESULTS_ERROR'; payload: string | null }
   | { type: 'CLEAR_RESULTS' }
   | { type: 'SET_SCHEMA_LOADING'; payload: boolean }
@@ -134,3 +134,5 @@ export function useAppContext(): AppContextValue {
   if (!ctx) throw new Error('useAppContext debe ser usado dentro de un AppProvider');
   return ctx;
 }
+
+    

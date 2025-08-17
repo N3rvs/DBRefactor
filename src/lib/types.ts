@@ -67,7 +67,7 @@ export type GenerateOptions = {
   allowDestructive?: boolean;
 };
 
-export type RefactorPlan = { renames: RenameItemDto[] };
+export type RefactorPlanDto = { renames: RenameItemDto[] };
 
 // ---- Esquema ----
 export interface ColumnInfo { Name: string; SqlType: string; IsNullable: boolean; }
@@ -109,7 +109,7 @@ export type RefactorRequest = {
   useViews?: boolean;
   cqrs?: boolean;
   allowDestructive?: boolean;
-  plan: RefactorPlan;
+  plan: RefactorPlanDto; // <--- Referencia al DTO del plan
 };
 
 export type CleanupRequest = {
@@ -140,7 +140,7 @@ export type RefactorResponse = {
   apply?: boolean;
   sql?: SqlBundle;
   codefix?: CodeFixRunResult;
-  dbLog?: string[];
+  dbLog?: string | string[]; // Puede ser string o array
 };
 
 export type CleanupResponse = {
@@ -152,3 +152,5 @@ export type CleanupResponse = {
 export type CodeFixResponse = CodeFixRunResult;
 
 export type ApiError = { message: string; error?: string; title?: string; detail?: string; };
+
+    
