@@ -120,20 +120,20 @@ export function PlanBuilder() {
       if (actionType === 'apply' || actionType === 'preview') {
         const isApply = actionType === 'apply';
         
-        // Payload para /refactor/run, que espera un objeto Plan anidado
+        // Payload para /refactor/run, que espera un objeto Plan anidado.
         const runPayload = {
           SessionId: sessionId,
           Apply: isApply,
           RootKey: rootKey,
-          UseSynonyms: !!UseSynonyms,
-          UseViews: !!UseViews,
-          Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
-          // El backend espera `Plan: { Renames: [...] }` con PascalCase
+          UseSynonyms,
+          UseViews,
+          Cqrs,
+          AllowDestructive, // <-- AHORA SE INCLUYE CORRECTAMENTE
           Plan: {
-            Renames: renamesDto,
+            Renames: renamesDto, // <-- La lista está anidada y en PascalCase
           },
         };
+
         const response = await api.runRefactor(runPayload);
         dispatch({
           type: 'SET_RESULTS_SUCCESS',
@@ -146,14 +146,14 @@ export function PlanBuilder() {
         toast({ title: isApply ? 'Plan Aplicado' : 'Previsualización Generada', description: isApply ? 'Los cambios han sido aplicados.' : 'Los resultados de la previsualización están listos.' });
       
       } else if (actionType === 'cleanup') {
-         // Payload para /apply/cleanup, que espera Renames en el nivel superior (plano)
+         // Payload para /apply/cleanup, que espera Renames en el nivel superior (plano).
         const cleanupPayload = {
           SessionId: sessionId,
           Renames: renamesDto,
-          UseSynonyms: !!UseSynonyms,
-          UseViews: !!UseViews,
-          Cqrs: !!Cqrs,
-          AllowDestructive: !!AllowDestructive,
+          UseSynonyms,
+          UseViews,
+          Cqrs,
+          AllowDestructive, // La limpieza también puede necesitar esto
         };
         const response = await api.runCleanup(cleanupPayload);
         dispatch({
@@ -257,7 +257,6 @@ export function PlanBuilder() {
     }
   }
 
-  // Las operaciones destructivas ahora se manejan con el botón "Aplicar"
   const applyButtonVariant = hasDestructiveOps ? "destructive" : "default";
 
   return (
