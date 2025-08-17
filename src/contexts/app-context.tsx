@@ -119,7 +119,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
         const data = await analyzeSchema({ sessionId: sid });
-        const tables = normalizeDbSchema(data.tables);
+        // La normalización ahora ocurre dentro del cliente API, pero mantenemos esto por si acaso
+        const tables = normalizeDbSchema({ tables: data.tables }); 
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });

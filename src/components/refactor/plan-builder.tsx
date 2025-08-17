@@ -105,7 +105,7 @@ export function PlanBuilder() {
     try {
       const response = await api.runRefactor({
         sessionId,
-        apply: false,
+        apply: false, // Preview no aplica cambios
         rootKey,
         useSynonyms,
         useViews,
@@ -151,7 +151,7 @@ export function PlanBuilder() {
     }
 
     try {
-      // 1. Aplicar Plan
+      // 1. Aplicar Plan (Rename + Compatibilidad)
       const applyResponse = await api.runRefactor({
         sessionId,
         apply: true,
@@ -162,19 +162,19 @@ export function PlanBuilder() {
         plan: { renames: renamesDto },
       });
 
-      toast({ title: 'Plan Aplicado', description: 'El plan principal se ejecutó correctamente. Iniciando limpieza...' });
+      toast({ title: 'Plan Aplicado', description: 'Los renames y objetos de compatibilidad se ejecutaron. Iniciando limpieza...' });
 
-      // 2. Limpiar
+      // 2. Limpiar (DROP + Fase 2 de renames)
       const cleanupResponse = await api.runCleanup({
         sessionId,
         renames: renamesDto,
         useSynonyms,
         useViews,
         cqrs,
-        allowDestructive: hasDestructiveOps, // Solo permitir borrado en cleanup si hay ops destructivas
+        allowDestructive: allowDestructive, // Pasar el flag
       });
 
-      // 3. Consolidar resultados
+      // 3. Consolidar resultados en la UI
       dispatch({
         type: 'SET_RESULTS_SUCCESS',
         payload: {
@@ -183,12 +183,12 @@ export function PlanBuilder() {
             compatSql: applyResponse.sql?.compatSql,
             cleanupSql: cleanupResponse.sql?.cleanupSql,
           },
-          codefix: applyResponse.codefix || null,
+          codefix: applyResponse.codefix || null, // CodeFix solo se ejecuta en el primer paso
           dbLog: [
             '--- APPLY LOG ---',
-            ...(Array.isArray(applyResponse.dbLog) ? applyResponse.dbLog : [applyResponse.dbLog || '']),
+            ...(Array.isArray(applyResponse.dbLog) ? applyResponse.dbLog : [String(applyResponse.dbLog || '')]),
             '--- CLEANUP LOG ---',
-            ...(Array.isArray(cleanupResponse.log) ? cleanupResponse.log : [cleanupResponse.log || '']),
+            ...(Array.isArray(cleanupResponse.log) ? cleanupResponse.log : [String(cleanupResponse.log || '')]),
           ],
         },
       });
