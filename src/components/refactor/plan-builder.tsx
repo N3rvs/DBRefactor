@@ -47,6 +47,7 @@ import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 const toRenameItemDto = (op: PlanOperation): RenameOp => {
+  // Frontend usa PascalCase, la API espera camelCase en los DTOs
   return {
     scope: op.Scope,
     area: op.Area,
@@ -171,7 +172,7 @@ export function PlanBuilder() {
         useSynonyms,
         useViews,
         cqrs,
-        allowDestructive: allowDestructive,
+        allowDestructive, // <-- LA CORRECCIÓN ESTÁ AQUÍ
       });
 
       // 3. Consolidar resultados en la UI
