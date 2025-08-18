@@ -50,7 +50,7 @@ import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 const toRenameItemDto = (op: PlanOperation): RenameOp => {
   return {
-    scope: op.Scope,
+    scope: op.Scope as any, // Cast because the type is slightly different
     area: op.Area,
     tableFrom: op.TableFrom,
     tableTo: op.TableTo,
@@ -63,7 +63,6 @@ const toRenameItemDto = (op: PlanOperation): RenameOp => {
 
 export function PlanBuilder() {
   const { state, dispatch } = useAppContext();
-  const { sessionId, connectionString } = state;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
@@ -71,6 +70,7 @@ export function PlanBuilder() {
   const [aiRationale, setAiRationale] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
   const hasDestructiveOps = useMemo(
     () => state.plan.some(op => op.Scope && op.Scope.startsWith('drop-')),
@@ -92,7 +92,7 @@ export function PlanBuilder() {
   };
   
   const handlePreview = async () => {
-     if (!sessionId) {
+     if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -100,6 +100,7 @@ export function PlanBuilder() {
       toast({ title: 'Plan Vacío', description: 'Agregue al menos una operación al plan.' });
       return;
     }
+    setIsPreviewing(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
     const renamesDto = state.plan.map(toRenameItemDto);
@@ -107,7 +108,7 @@ export function PlanBuilder() {
 
     try {
       const response = await api.runRefactor({
-        sessionId,
+        sessionId: state.sessionId,
         apply: false, // Preview no aplica cambios
         rootKey,
         useSynonyms,
@@ -128,11 +129,13 @@ export function PlanBuilder() {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
       toast({ variant: 'destructive', title: 'Operación Fallida', description: errorMsg });
+    } finally {
+      setIsPreviewing(false);
     }
   };
   
   const handleApply = async () => {
-    if (!sessionId) {
+    if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -149,7 +152,7 @@ export function PlanBuilder() {
 
     try {
       const response = await api.runRefactor({
-        sessionId,
+        sessionId: state.sessionId,
         apply: true,
         rootKey,
         useSynonyms,
@@ -177,9 +180,9 @@ export function PlanBuilder() {
   };
 
   const handleCleanup = async () => {
-    if (!sessionId) {
-      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
-      return;
+    if (!state.sessionId) {
+        toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
+        return;
     }
     if (state.plan.length === 0) {
       toast({ title: 'Plan Vacío', description: 'No hay operaciones para limpiar.' });
@@ -201,8 +204,8 @@ export function PlanBuilder() {
 
     try {
       const response = await api.runCleanup({
-        sessionId,
-        connectionString,
+        sessionId: state.sessionId,
+        connectionString: state.connectionString,
         renames: renamesDto,
         useSynonyms,
         useViews,
@@ -229,7 +232,7 @@ export function PlanBuilder() {
   };
 
   const handleSuggestOrder = async () => {
-    if (!sessionId) {
+    if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -322,7 +325,7 @@ export function PlanBuilder() {
     }
   }
   
-  const isLoading = state.results.isLoading || isApplying || isCleaning || isAiLoading;
+  const isLoading = state.results.isLoading || isApplying || isCleaning || isAiLoading || isPreviewing;
 
   return (
     <>
@@ -427,7 +430,7 @@ export function PlanBuilder() {
                 Sugerir Orden (IA)
             </Button>
              <Button variant="outline" onClick={handlePreview} disabled={isLoading || state.plan.length === 0}>
-                {state.results.isLoading && !isApplying && !isCleaning && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                {isPreviewing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 <Play className="mr-2 h-4 w-4"/>
                 Previsualizar
             </Button>
