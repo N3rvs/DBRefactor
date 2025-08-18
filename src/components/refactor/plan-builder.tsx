@@ -62,8 +62,8 @@ const toRenameItemDto = (op: PlanOperation): RenameOp => {
 };
 
 export function PlanBuilder() {
-  const { state, dispatch, dbSession } = useAppContext();
-  const { sessionId, connectionString } = dbSession;
+  const { state, dispatch } = useAppContext();
+  const { sessionId, connectionString } = state;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
@@ -73,7 +73,7 @@ export function PlanBuilder() {
   const [isCleaning, setIsCleaning] = useState(false);
 
   const hasDestructiveOps = useMemo(
-    () => state.plan.some(op => op.Scope?.startsWith('drop-')),
+    () => state.plan.some(op => op.Scope && op.Scope.startsWith('drop-')),
     [state.plan]
   );
   
@@ -177,7 +177,7 @@ export function PlanBuilder() {
   };
 
   const handleCleanup = async () => {
-    if (!sessionId || !connectionString) {
+    if (!sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -186,33 +186,23 @@ export function PlanBuilder() {
       return;
     }
 
-    const destructiveOpsExist = state.plan.some(op => op.Scope?.startsWith('drop-'));
-    if (destructiveOpsExist) {
+    if (hasDestructiveOps) {
         const confirmed = window.confirm(
             "ADVERTENCIA: Esta acción contiene operaciones DESTRUCTIVAS (DROP) y es IRREVERSIBLE.\n\n¿Está seguro de que desea continuar con la limpieza?"
         );
         if (!confirmed) return;
     }
 
-
     setIsCleaning(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
 
     const renamesDto = state.plan.map(toRenameItemDto);
     const { useSynonyms, useViews, cqrs, allowDestructive } = state.options;
-    
-    if (hasDestructiveOps && !allowDestructive) {
-      const msg = 'El plan contiene operaciones destructivas. Habilite "Permitir Eliminaciones" en las opciones.';
-      dispatch({ type: 'SET_RESULTS_ERROR', payload: msg });
-      toast({ variant: 'destructive', title: 'Acción Bloqueada', description: msg });
-      setIsCleaning(false);
-      return;
-    }
 
     try {
       const response = await api.runCleanup({
         sessionId,
-        connectionString, // Enviar connectionString
+        connectionString,
         renames: renamesDto,
         useSynonyms,
         useViews,

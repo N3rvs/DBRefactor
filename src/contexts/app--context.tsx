@@ -1,13 +1,13 @@
-
 'use client';
 
-import React, { createContext, useCallback, useContext, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useReducer, useState } from 'react';
 import type { ReactNode } from 'react';
 import type {
   PlanOperation,
   CodeFixRunResult,
   SqlBundle,
   TableInfo,
+  ConnectResponse,
 } from '@/lib/types';
 import { analyzeSchema, connectSession, disconnectSession } from '@/lib/api';
 import { normalizeDbSchema } from '@/lib/normalize-db-schema';
@@ -72,8 +72,7 @@ type Action =
   | { type: 'SESSION_START' }
   | { type: 'SESSION_SUCCESS'; payload: { sessionId: string; expiresAtUtc: string; connectionString: string } }
   | { type: 'SESSION_ERROR'; payload: string }
-  | { type: 'SESSION_END' }
-  | { type: 'SET_CONNECTION_STRING'; payload: string | null };
+  | { type: 'SESSION_END' };
 
 // ---------- REDUCER ----------
 const appReducer = (state: AppState, action: Action): AppState => {
@@ -135,8 +134,6 @@ const appReducer = (state: AppState, action: Action): AppState => {
         plan: initialState.plan,       // Limpiar plan al desconectar
         results: initialState.results, // Limpiar resultados al desconectar
       };
-    case 'SET_CONNECTION_STRING':
-        return { ...state, connectionString: action.payload };
     default:
       return state;
   }
@@ -163,7 +160,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { ...res, connectionString } });
-      dispatch({ type: 'SET_CONNECTION_STRING', payload: connectionString });
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
@@ -197,12 +193,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-        // Limpiar estado en caso de error para evitar inconsistencias
-        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] });
-        dispatch({ type: 'SET_CONNECTION_STRING', payload: null });
+        // En caso de error, desconectar para forzar al usuario a reintentar con una cadena válida.
+        await disconnect();
       }
     },
-    [state.connectionString]
+    [state.connectionString, disconnect]
   );
 
   return (

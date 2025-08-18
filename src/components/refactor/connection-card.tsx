@@ -12,44 +12,25 @@ import { es } from 'date-fns/locale';
 import { useAppContext } from '@/contexts/app-context';
 
 export function ConnectionCard() {
-  const [connectionString, setConnectionString] = useState('');
+  const [localConnectionString, setLocalConnectionString] = useState('');
   const { toast } = useToast();
-  const { state, dispatch, dbSession, refreshSchema } = useAppContext();
-  const { connect, disconnect, isLoading, sessionId, expiresAtUtc, error } = dbSession;
+  const { state, connect, disconnect } = useAppContext();
+  const { sessionId, sessionExpiresAt, sessionIsLoading, sessionError } = state;
 
   const handleConnect = async () => {
-    const trimmed = connectionString.trim();
+    const trimmed = localConnectionString.trim();
     if (!trimmed) {
       toast({ variant: 'destructive', title: 'Error', description: 'La cadena de conexión no puede estar vacía.' });
       return;
     }
     try {
       await connect(trimmed);
-      dispatch({ type: 'SET_CONNECTION_STRING', payload: trimmed });
-      // La actualización del esquema se dispara desde el useEffect en SchemaCard
-      // para asegurar que el estado de connectionString esté actualizado.
       toast({ title: 'Éxito', description: 'Conectado a la base de datos con éxito.' });
-      setConnectionString(''); // Limpiar la cadena de conexión de la UI
+      setLocalConnectionString(''); // Limpiar la cadena de conexión de la UI
     } catch (err) {
       toast({
         variant: 'destructive',
         title: 'Conexión Fallida',
-        description: err instanceof Error ? err.message : 'Ocurrió un error desconocido.',
-      });
-    }
-  };
-
-  const handleDisconnect = async () => {
-    if (!sessionId) return;
-    try {
-      await disconnect();
-      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] }); // limpia esquema
-      dispatch({ type: 'SET_CONNECTION_STRING', payload: null }); // Limpiar del estado
-      toast({ title: 'Éxito', description: 'Desconectado de la base de datos.' });
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Desconexión Fallida',
         description: err instanceof Error ? err.message : 'Ocurrió un error desconocido.',
       });
     }
@@ -77,9 +58,9 @@ export function ConnectionCard() {
                 </p>
               </div>
             </div>
-            {expiresAtUtc && (
+            {sessionExpiresAt && (
               <p className="text-sm text-muted-foreground">
-                La sesión expira {formatDistanceToNow(new Date(expiresAtUtc), { addSuffix: true, locale: es })}.
+                La sesión expira {formatDistanceToNow(new Date(sessionExpiresAt), { addSuffix: true, locale: es })}.
               </p>
             )}
           </div>
@@ -87,18 +68,18 @@ export function ConnectionCard() {
           <div className="space-y-4">
             <Textarea
               placeholder="Ingrese su cadena de conexión a la base de datos..."
-              value={connectionString}
-              onChange={(e) => setConnectionString(e.target.value)}
+              value={localConnectionString}
+              onChange={(e) => setLocalConnectionString(e.target.value)}
               className="min-h-[100px] font-mono text-sm"
               autoComplete="off"
               data-lpignore="true"
               inputMode="none"
               aria-label="Cadena de Conexión de la Base de Datos"
             />
-            {error && (
+            {sessionError && (
               <div className="flex items-center gap-2 text-destructive text-sm">
                 <XCircle className="w-4 h-4" />
-                <span>{error}</span>
+                <span>{sessionError}</span>
               </div>
             )}
           </div>
@@ -107,13 +88,13 @@ export function ConnectionCard() {
 
       <CardFooter>
         {sessionId ? (
-          <Button onClick={handleDisconnect} disabled={isLoading} variant="destructive" className="w-full">
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={disconnect} disabled={sessionIsLoading} variant="destructive" className="w-full">
+            {sessionIsLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Desconectar
           </Button>
         ) : (
-          <Button onClick={handleConnect} disabled={isLoading || state.schema.isLoading} className="w-full">
-            {(isLoading || state.schema.isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleConnect} disabled={sessionIsLoading || state.schema.isLoading} className="w-full">
+            {(sessionIsLoading || state.schema.isLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Conectar
           </Button>
         )}
