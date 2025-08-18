@@ -9,7 +9,7 @@ import type {
   CodeFixResponse,
   ConnectRequest,
   ConnectResponse,
-  DisconnectRequest,
+  DisconnectRequest, 
   RefactorRequest,
   RefactorResponse,
   PlanRequest,
@@ -17,12 +17,12 @@ import type {
   RenameOp,
 } from './types';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_DBREFACTOR_API || 'http://localhost:7040').replace(/\/+$/,"");
+const API_BASE_URL = (process.env.NEXT_PUBLIC_DBREFACTOR_API);
 
 async function fetchApi<T>(
   path: string,
   options: RequestInit = {},
-  timeoutMs: number = 120000 // 2 minutos para operaciones largas
+  timeoutMs: number = 320000 
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
