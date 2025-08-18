@@ -30,6 +30,8 @@ import {
   ClipboardCheck,
   Sparkles,
   AlertTriangle,
+  FileCheck2,
+  Eraser,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -47,7 +49,6 @@ import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 const toRenameItemDto = (op: PlanOperation): RenameOp => {
-  // Frontend usa PascalCase, la API espera camelCase en los DTOs
   return {
     scope: op.Scope,
     area: op.Area,
@@ -62,18 +63,20 @@ const toRenameItemDto = (op: PlanOperation): RenameOp => {
 
 export function PlanBuilder() {
   const { state, dispatch, dbSession } = useAppContext();
-  const { sessionId } = dbSession;
+  const { sessionId, connectionString } = dbSession;
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [isCleaning, setIsCleaning] = useState(false);
 
   const hasDestructiveOps = useMemo(
-    () => state.plan.some(op => op.Scope && op.Scope.startsWith('drop-')),
+    () => state.plan.some(op => op.Scope?.startsWith('drop-')),
     [state.plan]
   );
-
+  
   const handleAddNew = () => {
     setEditingOp(null);
     setIsDialogOpen(true);
@@ -128,8 +131,8 @@ export function PlanBuilder() {
     }
   };
   
-  const handleApplyAndCleanup = async () => {
-    if (!sessionId || !state.connectionString) {
+  const handleApply = async () => {
+    if (!sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
@@ -138,21 +141,14 @@ export function PlanBuilder() {
       return;
     }
 
+    setIsApplying(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
-    
+
     const renamesDto = state.plan.map(toRenameItemDto);
-    const { rootKey, useSynonyms, useViews, cqrs, allowDestructive } = state.options;
-    
-    if (hasDestructiveOps && !allowDestructive) {
-      const msg = 'El plan contiene operaciones destructivas. Habilite "Permitir Eliminaciones" en las opciones.';
-      dispatch({ type: 'SET_RESULTS_ERROR', payload: msg });
-      toast({ variant: 'destructive', title: 'Acción Bloqueada', description: msg });
-      return;
-    }
+    const { rootKey, useSynonyms, useViews, cqrs } = state.options;
 
     try {
-      // 1. Aplicar Plan (Rename + Compatibilidad)
-      const applyResponse = await api.runRefactor({
+      const response = await api.runRefactor({
         sessionId,
         apply: true,
         rootKey,
@@ -161,47 +157,86 @@ export function PlanBuilder() {
         cqrs,
         plan: { renames: renamesDto },
       });
+      
+      dispatch({
+        type: 'SET_RESULTS_SUCCESS',
+        payload: {
+          sql: response.sql || null,
+          codefix: response.codefix || null,
+          dbLog: response.dbLog || null,
+        },
+      });
+      toast({ title: 'Plan Aplicado Correctamente', description: 'Los renames y la compatibilidad se han ejecutado en la base de datos.' });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
+      toast({ variant: 'destructive', title: 'Error al Aplicar', description: errorMsg });
+    } finally {
+      setIsApplying(false);
+    }
+  };
 
-      toast({ title: 'Plan Aplicado', description: 'Los renames y objetos de compatibilidad se ejecutaron. Iniciando limpieza...' });
+  const handleCleanup = async () => {
+    if (!sessionId || !connectionString) {
+      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
+      return;
+    }
+    if (state.plan.length === 0) {
+      toast({ title: 'Plan Vacío', description: 'No hay operaciones para limpiar.' });
+      return;
+    }
 
-      // 2. Limpiar (DROP + Fase 2 de renames)
-      const cleanupResponse = await api.runCleanup({
+    const destructiveOpsExist = state.plan.some(op => op.Scope?.startsWith('drop-'));
+    if (destructiveOpsExist) {
+        const confirmed = window.confirm(
+            "ADVERTENCIA: Esta acción contiene operaciones DESTRUCTIVAS (DROP) y es IRREVERSIBLE.\n\n¿Está seguro de que desea continuar con la limpieza?"
+        );
+        if (!confirmed) return;
+    }
+
+
+    setIsCleaning(true);
+    dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
+
+    const renamesDto = state.plan.map(toRenameItemDto);
+    const { useSynonyms, useViews, cqrs, allowDestructive } = state.options;
+    
+    if (hasDestructiveOps && !allowDestructive) {
+      const msg = 'El plan contiene operaciones destructivas. Habilite "Permitir Eliminaciones" en las opciones.';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: msg });
+      toast({ variant: 'destructive', title: 'Acción Bloqueada', description: msg });
+      setIsCleaning(false);
+      return;
+    }
+
+    try {
+      const response = await api.runCleanup({
         sessionId,
-        connectionString: state.connectionString, // Enviar connectionString
+        connectionString, // Enviar connectionString
         renames: renamesDto,
         useSynonyms,
         useViews,
         cqrs,
-        allowDestructive, // <-- LA CORRECCIÓN ESTÁ AQUÍ
+        allowDestructive,
       });
 
-      // 3. Consolidar resultados en la UI
       dispatch({
         type: 'SET_RESULTS_SUCCESS',
         payload: {
-          sql: {
-            renameSql: applyResponse.sql?.renameSql,
-            compatSql: applyResponse.sql?.compatSql,
-            cleanupSql: cleanupResponse.sql?.cleanupSql,
-          },
-          codefix: applyResponse.codefix || null, // CodeFix solo se ejecuta en el primer paso
-          dbLog: [
-            '--- APPLY LOG ---',
-            ...(Array.isArray(applyResponse.dbLog) ? applyResponse.dbLog : [String(applyResponse.dbLog || '')]),
-            '--- CLEANUP LOG ---',
-            ...(Array.isArray(cleanupResponse.log) ? cleanupResponse.log : [String(cleanupResponse.log || '')]),
-          ],
+          sql: response.sql || null,
+          codefix: null, // Cleanup no genera codefix
+          dbLog: response.log || null,
         },
       });
-
-      toast({ title: 'Proceso Completado', description: 'El plan y la limpieza se han ejecutado con éxito.' });
+      toast({ title: 'Limpieza Completada', description: 'Se han eliminado los objetos de compatibilidad y los elementos obsoletos.' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
-      toast({ variant: 'destructive', title: 'Operación Fallida', description: errorMsg });
+      toast({ variant: 'destructive', title: 'Error en la Limpieza', description: errorMsg });
+    } finally {
+      setIsCleaning(false);
     }
   };
-
 
   const handleSuggestOrder = async () => {
     if (!sessionId) {
@@ -223,11 +258,21 @@ export function PlanBuilder() {
       
       const aiResult = await getAiRefactoringSuggestion({
         tables: state.schema.tables,
-        renames: plainRenames,
+        renames: plainRenames.map(op => ({ ...op, scope: op.Scope, tableFrom: op.TableFrom, tableTo: op.TableTo, columnFrom: op.ColumnFrom, columnTo: op.ColumnTo, type: op.Type, note: op.Note }))
       });
-
+      
       const newOrderedPlan = aiResult.orderedRenames.map(op => {
-        return op as PlanOperation;
+        // La IA devuelve camelCase, lo normalizamos a PascalCase para el estado
+        return {
+          Scope: op.scope,
+          Area: op.area,
+          TableFrom: op.tableFrom,
+          TableTo: op.tableTo,
+          ColumnFrom: op.columnFrom,
+          ColumnTo: op.columnTo,
+          Type: op.type,
+          Note: op.note
+        } as PlanOperation;
       });
 
       dispatch({ type: 'SET_PLAN', payload: newOrderedPlan });
@@ -286,8 +331,8 @@ export function PlanBuilder() {
         return '-';
     }
   }
-
-  const applyButtonVariant = hasDestructiveOps ? "destructive" : "default";
+  
+  const isLoading = state.results.isLoading || isApplying || isCleaning || isAiLoading;
 
   return (
     <>
@@ -309,7 +354,7 @@ export function PlanBuilder() {
                     Cree y ordene su lista de operaciones de refactorización.
                 </CardDescription>
             </div>
-            <Button onClick={handleAddNew} size="sm">
+            <Button onClick={handleAddNew} size="sm" disabled={isLoading}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Añadir Operación
             </Button>
@@ -344,18 +389,19 @@ export function PlanBuilder() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLoading}>
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(op)}>
+                            <DropdownMenuItem onClick={() => handleEdit(op)} disabled={isLoading}>
                               <Pencil className="mr-2 h-4 w-4" />
                               Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleRemove(op.id)}
                               className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                              disabled={isLoading}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
@@ -380,30 +426,39 @@ export function PlanBuilder() {
               <AlertTriangle className="h-5 w-5" />
               <div>
                 <p className="font-semibold">El plan contiene operaciones destructivas.</p>
-                <p className="text-xs">Asegúrese de que "Permitir Eliminaciones" esté habilitado en las opciones antes de aplicar.</p>
+                <p className="text-xs">La limpieza de estas operaciones requiere habilitar "Permitir Eliminaciones" en las opciones.</p>
               </div>
             </div>
           )}
         </CardContent>
         <CardFooter className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={handleSuggestOrder} disabled={isAiLoading || state.plan.length < 2 || state.results.isLoading}>
+            <Button variant="outline" onClick={handleSuggestOrder} disabled={isLoading || state.plan.length < 2}>
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
                 Sugerir Orden (IA)
             </Button>
-             <Button variant="outline" onClick={handlePreview} disabled={state.results.isLoading || state.plan.length === 0}>
-                {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+             <Button variant="outline" onClick={handlePreview} disabled={isLoading || state.plan.length === 0}>
+                {state.results.isLoading && !isApplying && !isCleaning && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 <Play className="mr-2 h-4 w-4"/>
-                Previsualizar Plan
+                Previsualizar
             </Button>
             <Button 
-                onClick={handleApplyAndCleanup}
-                disabled={state.results.isLoading || state.plan.length === 0}
-                variant={applyButtonVariant}
-                title="Aplica los cambios de refactorización y luego ejecuta la limpieza de objetos de compatibilidad."
+                onClick={handleApply}
+                disabled={isLoading || state.plan.length === 0}
+                title="Aplica los cambios de refactorización y crea objetos de compatibilidad. No elimina datos."
             >
-                 {state.results.isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                 <ClipboardCheck className="mr-2 h-4 w-4"/>
-                Aplicar y Limpiar
+                 {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                 <FileCheck2 className="mr-2 h-4 w-4"/>
+                Aplicar Plan
+            </Button>
+            <Button 
+                onClick={handleCleanup}
+                disabled={isLoading || state.plan.length === 0 || (hasDestructiveOps && !state.options.allowDestructive)}
+                variant="destructive"
+                title="Ejecuta la limpieza de objetos de compatibilidad y operaciones destructivas. ¡Esta acción es irreversible!"
+            >
+                 {isCleaning && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                 <Eraser className="mr-2 h-4 w-4"/>
+                Limpiar
             </Button>
         </CardFooter>
       </Card>
