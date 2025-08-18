@@ -42,6 +42,11 @@ const normalizeTable = (t: AnyRec): TableInfo => ({
 
 /** Normaliza la respuesta del backend (camelCase o PascalCase) al shape de TableInfo */
 export function normalizeDbSchema(raw: unknown): TableInfo[] {
+  if (Array.isArray(raw)) {
+    // Si la API devuelve un array de tablas directamente
+    return raw.map(normalizeTable);
+  }
+  // Si la API devuelve un objeto { tables: [...] }
   const obj = raw as AnyRec;
   const tables = (pick(obj, 'Tables', 'tables') ?? []) as AnyRec[];
   return tables.map(normalizeTable);
