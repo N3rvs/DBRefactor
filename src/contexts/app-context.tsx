@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useCallback, useContext, useReducer } from 'react';
@@ -36,7 +35,6 @@ export interface AppState {
     error: string | null;
   };
   options: GenerationOptions & { rootKey: string };
-  connectionString: string | null;
   sessionId: string | null;
   sessionExpiresAt: string | null;
   sessionIsLoading: boolean;
@@ -48,7 +46,6 @@ const initialState: AppState = {
   results: { sql: null, codefix: null, dbLog: null, isLoading: false, error: null },
   schema: { tables: null, isLoading: false, error: null },
   options: { rootKey: 'SOLUTION', useSynonyms: true, useViews: true, cqrs: false, allowDestructive: false },
-  connectionString: null,
   sessionId: null,
   sessionExpiresAt: null,
   sessionIsLoading: false,
@@ -70,10 +67,9 @@ type Action =
   | { type: 'SET_SCHEMA_ERROR'; payload: string | null }
   | { type: 'SET_OPTION'; payload: { key: keyof AppState['options']; value: any } }
   | { type: 'SESSION_START' }
-  | { type: 'SESSION_SUCCESS'; payload: { sessionId: string; expiresAtUtc: string; connectionString: string } }
+  | { type: 'SESSION_SUCCESS'; payload: { sessionId: string; expiresAtUtc: string } }
   | { type: 'SESSION_ERROR'; payload: string }
-  | { type: 'SESSION_END' }
-  | { type: 'SET_CONNECTION_STRING'; payload: string | null };
+  | { type: 'SESSION_END' };
 
 // ---------- REDUCER ----------
 const appReducer = (state: AppState, action: Action): AppState => {
@@ -99,9 +95,9 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'SET_SCHEMA_LOADING':
       return { ...state, schema: { ...state.schema, isLoading: action.payload, error: null } };
     case 'SET_SCHEMA_SUCCESS':
-      return { ...state, schema: { tables: action.payload, isLoading: false, error: null } };
+        return { ...state, schema: { tables: action.payload, isLoading: false, error: null } };
     case 'SET_SCHEMA_ERROR':
-      return { ...state, schema: { ...initialState.schema, error: action.payload } };
+      return { ...state, schema: { tables: null, isLoading: false, error: action.payload } };
     case 'SET_OPTION':
       return { ...state, options: { ...state.options, [action.payload.key]: action.payload.value } };
     case 'SESSION_START':
@@ -112,7 +108,6 @@ const appReducer = (state: AppState, action: Action): AppState => {
         sessionIsLoading: false,
         sessionId: action.payload.sessionId,
         sessionExpiresAt: action.payload.expiresAtUtc,
-        connectionString: action.payload.connectionString,
       };
     case 'SESSION_ERROR':
       return {
@@ -121,7 +116,6 @@ const appReducer = (state: AppState, action: Action): AppState => {
         sessionError: action.payload,
         sessionId: null,
         sessionExpiresAt: null,
-        connectionString: null,
       };
     case 'SESSION_END':
       return {
@@ -130,13 +124,10 @@ const appReducer = (state: AppState, action: Action): AppState => {
         sessionError: null,
         sessionId: null,
         sessionExpiresAt: null,
-        connectionString: null,
         schema: initialState.schema, // Limpiar esquema al desconectar
         plan: initialState.plan,       // Limpiar plan al desconectar
         results: initialState.results, // Limpiar resultados al desconectar
       };
-    case 'SET_CONNECTION_STRING':
-        return { ...state, connectionString: action.payload };
     default:
       return state;
   }
@@ -180,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
-      dispatch({ type: 'SESSION_SUCCESS', payload: { ...res, connectionString } });
+      dispatch({ type: 'SESSION_SUCCESS', payload: res });
       await refreshSchema(res.sessionId); // Auto-refresh schema on connect
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });

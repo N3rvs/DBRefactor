@@ -70,7 +70,11 @@ export type CodeFixRunResult = {
 // ---- Requests (camelCase para el body JSON) ----
 export type ConnectRequest = { connectionString: string; ttlSeconds?: number; };
 export type DisconnectRequest = { sessionId: string; };
-export type AnalyzeSchemaRequest = { sessionId?: string; connectionKey?: string; connectionString?: string; };
+export type AnalyzeSchemaRequest = { 
+  sessionId?: string; 
+  connectionString?: string; 
+};
+
 
 export type RefactorRequest = {
   sessionId?: string;

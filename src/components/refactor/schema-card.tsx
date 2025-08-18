@@ -10,15 +10,10 @@ import type { PlanOperation } from '@/lib/types';
 
 export function SchemaCard() {
   const { state, refreshSchema } = useAppContext();
-  const { connectionString, schema } = state;
+  const { sessionId, schema } = state;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
-
-  useEffect(() => {
-    if (!connectionString) return;
-    refreshSchema().catch(err => console.error('Error al analizar esquema:', err));
-  }, [connectionString, refreshSchema]);
 
   const handleAddOperation = (op: Partial<Omit<PlanOperation, 'id' | 'Note'>>) => {
     const newOperation: Partial<PlanOperation> = {
@@ -46,7 +41,7 @@ export function SchemaCard() {
         </CardHeader>
 
         <CardContent>
-          {!connectionString ? (
+          {!sessionId ? (
             <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
               <p>Conéctese a una base de datos para ver su esquema.</p>
             </div>

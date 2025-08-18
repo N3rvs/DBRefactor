@@ -74,7 +74,9 @@ export const disconnectSession = (sessionId: string) =>
   fetchApi<void>("/session/disconnect", { method: "POST", body: JSON.stringify({ sessionId }) });
 
 export const analyzeSchema = (body: AnalyzeSchemaRequest) => {
-    return fetchApi<AnalyzeSchemaResponse>('/analyze/schema', { 
+    // Si se pasa un sessionId, se asume el nuevo endpoint, si no, el antiguo.
+    const endpoint = body.sessionId ? '/analyze/schema/session' : '/analyze/schema';
+    return fetchApi<AnalyzeSchemaResponse>(endpoint, { 
         method: "POST",
         body: JSON.stringify(body)
     });
