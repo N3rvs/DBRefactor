@@ -101,7 +101,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'SET_SCHEMA_SUCCESS':
       return { ...state, schema: { tables: action.payload, isLoading: false, error: null } };
     case 'SET_SCHEMA_ERROR':
-      return { ...state, schema: { tables: null, isLoading: false, error: action.payload } };
+      return { ...state, schema: { ...initialState.schema, error: action.payload } };
     case 'SET_OPTION':
       return { ...state, options: { ...state.options, [action.payload.key]: action.payload.value } };
     case 'SESSION_START':
@@ -157,18 +157,36 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  const refreshSchema = useCallback(
+    async (sessionId: string) => {
+      if (!sessionId) {
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay session ID para analizar.' });
+        return;
+      }
+      dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+      try {
+        const data = await analyzeSchema({ sessionId });
+        const tables = normalizeDbSchema(data); 
+        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
+      } catch (err: any) {
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+      }
+    },
+    []
+  );
+
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
     try {
       const res = await connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { ...res, connectionString } });
-      dispatch({ type: 'SET_CONNECTION_STRING', payload: connectionString });
+      await refreshSchema(res.sessionId); // Auto-refresh schema on connect
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
-  }, []);
+  }, [refreshSchema]);
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;
@@ -183,30 +201,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [state.sessionId]);
 
-  const refreshSchema = useCallback(
-    async () => {
-      const cs = state.connectionString;
-      if (!cs) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay cadena de conexión para analizar.' });
-        return;
-      }
-      dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
-      try {
-        const data = await analyzeSchema({ connectionString: cs });
-        const tables = normalizeDbSchema(data); 
-        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
-      } catch (err: any) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-        // Limpiar estado en caso de error para evitar inconsistencias
-        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: [] });
-        dispatch({ type: 'SET_CONNECTION_STRING', payload: null });
-      }
-    },
-    [state.connectionString]
-  );
+  const refreshSchemaCb = useCallback(async () => {
+    if (state.sessionId) {
+      await refreshSchema(state.sessionId);
+    }
+  }, [state.sessionId, refreshSchema]);
 
   return (
-    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema }}>
+    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema: refreshSchemaCb }}>
       {children}
     </AppContext.Provider>
   );

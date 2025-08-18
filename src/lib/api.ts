@@ -74,11 +74,10 @@ export const disconnectSession = (sessionId: string) =>
   fetchApi<void>("/session/disconnect", { method: "POST", body: JSON.stringify({ sessionId }) });
 
 export const analyzeSchema = (body: AnalyzeSchemaRequest) => {
-    const params = new URLSearchParams();
-    if (body.connectionString) params.append('connectionString', body.connectionString);
-    if (body.sessionId) params.append('sessionId', body.sessionId);
-    
-    return fetchApi<AnalyzeSchemaResponse>(`/analyze/schema?${params.toString()}`, { method: "GET" });
+    return fetchApi<AnalyzeSchemaResponse>('/analyze/schema', { 
+        method: "POST",
+        body: JSON.stringify(body)
+    });
 }
 
 export const generatePlan = (body: PlanRequest) =>

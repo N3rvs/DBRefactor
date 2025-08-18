@@ -73,7 +73,7 @@ export function PlanBuilder() {
   const [isPreviewing, setIsPreviewing] = useState(false);
 
   const hasDestructiveOps = useMemo(
-    () => state.plan.some(op => op.Scope && op.Scope.startsWith('drop-')),
+    () => state.plan.some(op => op && op.Scope && op.Scope.startsWith('drop-')),
     [state.plan]
   );
   
@@ -205,7 +205,6 @@ export function PlanBuilder() {
     try {
       const response = await api.runCleanup({
         sessionId: state.sessionId,
-        connectionString: state.connectionString,
         renames: renamesDto,
         useSynonyms,
         useViews,
@@ -430,8 +429,7 @@ export function PlanBuilder() {
                 Sugerir Orden (IA)
             </Button>
              <Button variant="outline" onClick={handlePreview} disabled={isLoading || state.plan.length === 0}>
-                {isPreviewing && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                <Play className="mr-2 h-4 w-4"/>
+                {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
                 Previsualizar
             </Button>
             <Button 
@@ -439,8 +437,7 @@ export function PlanBuilder() {
                 disabled={isLoading || state.plan.length === 0}
                 title="Aplica los cambios de refactorización y crea objetos de compatibilidad. No elimina datos."
             >
-                 {isApplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                 <FileCheck2 className="mr-2 h-4 w-4"/>
+                 {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileCheck2 className="mr-2 h-4 w-4"/>}
                 Aplicar Plan
             </Button>
             <Button 
@@ -449,8 +446,7 @@ export function PlanBuilder() {
                 variant="destructive"
                 title="Ejecuta la limpieza de objetos de compatibilidad y operaciones destructivas. ¡Esta acción es irreversible!"
             >
-                 {isCleaning && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                 <Eraser className="mr-2 h-4 w-4"/>
+                 {isCleaning ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Eraser className="mr-2 h-4 w-4"/>}
                 Limpiar
             </Button>
         </CardFooter>
