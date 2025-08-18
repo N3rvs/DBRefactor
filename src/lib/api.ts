@@ -1,23 +1,25 @@
 'use client';
 import type {
-  AnalyzeSchemaRequest,
   AnalyzeSchemaResponse,
-  ApiError,
   CleanupRequest,
   CleanupResponse,
   CodeFixRequest,
   CodeFixResponse,
-  ConnectRequest,
   ConnectResponse,
-  DisconnectRequest, 
   RefactorRequest,
   RefactorResponse,
-  PlanRequest,
-  PlanResponse,
-  RenameOp,
 } from './types';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_DBREFACTOR_API);
+const pickDefaultBase = () => {
+  // Si el front corre en https, intenta https:7040 (evita mixed content)
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    return "https://localhost:7040";
+  }
+  // El puerto por defecto para el backend de DBRefactor
+  return "http://localhost:5066"; 
+};
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_DBREFACTOR_API ?? pickDefaultBase();
 
 async function fetchApi<T>(
   path: string,
@@ -41,8 +43,16 @@ async function fetchApi<T>(
 
     clearTimeout(timeout);
     
+    // Si la respuesta no tiene contenido (ej. 204 No Content), devolver null.
     const responseText = await response.text();
-    const json = responseText ? JSON.parse(responseText) : null;
+    if (!responseText) {
+      if (!response.ok) {
+         throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
+      }
+      return null as T;
+    }
+    
+    const json = JSON.parse(responseText);
 
     if (!response.ok) {
         const errorMessage = json?.error || json?.message || json?.title || `Error HTTP: ${response.status}`;
@@ -63,31 +73,26 @@ async function fetchApi<T>(
   }
 }
 
-
+/** 1) Crear sesión: POST /session/connect */
 export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
   fetchApi<ConnectResponse>("/session/connect", {
     method: "POST",
     body: JSON.stringify({ connectionString, ttlSeconds }),
   });
 
-export const disconnectSession = (sessionId: string) =>
-  fetchApi<void>("/session/disconnect", { method: "POST", body: JSON.stringify({ sessionId }) });
-
-export const analyzeSchema = (body: AnalyzeSchemaRequest) => {
-    // Si se pasa un sessionId, se asume el nuevo endpoint, si no, el antiguo.
-    const endpoint = body.sessionId ? '/analyze/schema/session' : '/analyze/schema';
-    return fetchApi<AnalyzeSchemaResponse>(endpoint, { 
+/** 2) Analizar esquema usando SessionId (endpoint recomendado) */
+export const analyzeSchema = (req: { sessionId: string }) => {
+    return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
         method: "POST",
-        body: JSON.stringify(body)
+        body: JSON.stringify(req)
     });
 }
 
-export const generatePlan = (body: PlanRequest) =>
-  fetchApi<PlanResponse>("/plan", {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
+/** 3) Desconectar sesión (opcional) */
+export const disconnectSession = (sessionId: string) =>
+  fetchApi<void>("/session/disconnect", { method: "POST", body: JSON.stringify({ sessionId }) });
 
+/** 4) Ejecutar refactor con SessionId */
 export const runRefactor = (req: RefactorRequest) =>
   fetchApi<RefactorResponse>("/refactor/run", { method: "POST", body: JSON.stringify(req) });
 
