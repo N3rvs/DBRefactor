@@ -139,7 +139,7 @@ type AppContextValue = {
   dispatch: React.Dispatch<Action>;
   connect: (connectionString: string) => Promise<void>;
   disconnect: () => Promise<void>;
-  refreshSchema: () => Promise<void>;
+  refreshSchema: (connectionString?: string) => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -149,14 +149,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   const refreshSchema = useCallback(
-    async (sessionId: string) => {
-      if (!sessionId) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay ID de sesión para analizar.' });
+    async (connectionString?: string) => {
+      const cs = connectionString;
+      if (!cs) {
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay cadena de conexión para analizar.' });
         return;
       }
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await api.analyzeSchema({ sessionId });
+        const data = await api.analyzeSchema(cs);
         const tables = normalizeDbSchema(data); 
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
@@ -171,10 +172,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
     try {
-      const res = await api.connectSession(connectionString);
+      // 1. Guardamos la CS para usarla en analyzeSchema
+      const cs = connectionString;
+      // 2. Creamos la sesión y obtenemos el sessionId
+      const res = await api.connectSession(cs);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      await refreshSchema(res.sessionId);
+      // 3. Analizamos el esquema usando la CS original
+      await refreshSchema(cs);
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
@@ -192,12 +197,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
        console.error(e?.message ?? 'No se pudo desconectar.');
     }
   }, [state.sessionId]);
-
+  
   const refreshSchemaCb = useCallback(async () => {
-    if (state.sessionId) {
-      await refreshSchema(state.sessionId);
-    }
-  }, [state.sessionId, refreshSchema]);
+    // Esta función ahora no tiene sentido si la CS solo está disponible al conectar.
+    // La mantenemos por si se decide cachear la CS en el estado en un futuro.
+  }, []);
+
 
   return (
     <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema: refreshSchemaCb }}>

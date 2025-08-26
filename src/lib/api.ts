@@ -8,6 +8,7 @@ import type {
   ConnectResponse,
   RefactorRequest,
   RefactorResponse,
+  RenameOp,
 } from './types';
 
 const API_BASE_URL = 'http://localhost:5066';
@@ -25,43 +26,54 @@ async function fetchApi<T>(
       cache: 'no-store',
       ...options,
       headers: {
-        'Accept': 'application/json',
-        ...((options.method === 'POST' || options.method === 'PUT' || options.method === 'DELETE') && options.body ? { "Content-Type": "application/json" } : {}),
+        Accept: 'application/json',
+        ...((options.method === 'POST' || options.method === 'PUT') && options.body
+          ? { 'Content-Type': 'application/json' }
+          : {}),
         ...options.headers,
       },
       signal: controller.signal,
     });
 
     clearTimeout(timeout);
-    
+
+    // DELETE puede no devolver contenido
     if (response.status === 204 && options.method === 'DELETE') {
       return null as T;
     }
 
     const responseText = await response.text();
+    // Algunas respuestas OK pueden no tener cuerpo
     if (!responseText && response.ok) {
       return null as T;
     }
 
     if (!response.ok) {
-        try {
-            const errorJson = JSON.parse(responseText);
-            const errorMessage = errorJson?.error || errorJson?.message || errorJson?.title || `Error HTTP: ${response.status}`;
-            throw new Error(errorMessage);
-        } catch (e) {
-            throw new Error(responseText || `Error HTTP: ${response.status} - ${response.statusText}`);
-        }
+      try {
+        const errorJson = JSON.parse(responseText);
+        const errorMessage =
+          errorJson?.error ||
+          errorJson?.message ||
+          errorJson?.title ||
+          `Error HTTP: ${response.status}`;
+        throw new Error(errorMessage);
+      } catch (e) {
+        throw new Error(
+          responseText || `Error HTTP: ${response.status} - ${response.statusText}`
+        );
+      }
     }
-    
-    return JSON.parse(responseText) as T;
 
+    return JSON.parse(responseText) as T;
   } catch (error) {
     clearTimeout(timeout);
     if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-            throw new Error(`La solicitud excedió el tiempo de espera de ${timeoutMs / 1000} segundos.`);
-        }
-        throw error;
+      if (error.name === 'AbortError') {
+        throw new Error(
+          `La solicitud excedió el tiempo de espera de ${timeoutMs / 1000} segundos.`
+        );
+      }
+      throw error;
     }
     throw new Error('Ocurrió un error inesperado.');
   }
@@ -69,91 +81,97 @@ async function fetchApi<T>(
 
 /** 1) Crear sesión: POST /session/connect */
 export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
-  fetchApi<ConnectResponse>("/session/connect", {
-    method: "POST",
-    body: JSON.stringify({ ConnectionString: connectionString, TtlSeconds: ttlSeconds }),
+  fetchApi<ConnectResponse>('/session/connect', {
+    method: 'POST',
+    body: JSON.stringify({ connectionString, ttlSeconds }),
   });
 
-/** 2) Analizar esquema usando SessionId (endpoint recomendado) */
-export const analyzeSchema = (req: { sessionId: string }) => {
-    return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
-        method: "POST",
-        body: JSON.stringify({ SessionId: req.sessionId })
-    });
-}
+/** 2) Analizar esquema usando GET y connectionString (endpoint recomendado por la guía) */
+export const analyzeSchema = (connectionString: string) => {
+  const url = new URL(`${API_BASE_URL}/analyze/schema`);
+  url.searchParams.set('connectionString', connectionString);
+  return fetchApi<AnalyzeSchemaResponse>(url.pathname + url.search);
+};
 
 /** 3) Desconectar sesión (opcional) */
 export const disconnectSession = (sessionId: string) =>
-  fetchApi<void>('/session/disconnect', { 
-    method: "POST",
-    body: JSON.stringify({ SessionId: sessionId })
+  fetchApi<void>(`/session/${sessionId}`, {
+    method: 'DELETE',
   });
-
 
 /** 4) Ejecutar refactor con SessionId */
 export const runRefactor = (req: RefactorRequest) => {
-    const body = {
-      SessionId: req.sessionId,
-      Apply: req.apply,
-      RootKey: req.rootKey,
-      UseSynonyms: req.useSynonyms,
-      UseViews: req.useViews,
-      Cqrs: req.cqrs,
-      Plan: {
-        Renames: req.plan.renames.map(op => ({
-          Scope: op.scope,
-          Area: op.area,
-          TableFrom: op.tableFrom,
-          TableTo: op.tableTo,
-          ColumnFrom: op.columnFrom,
-          ColumnTo: op.columnTo,
-          Type: op.type,
-          Note: op.note
-        }))
-      }
-    };
-    return fetchApi<RefactorResponse>("/refactor/run", { method: "POST", body: JSON.stringify(body) });
-}
+  const body = {
+    sessionId: req.sessionId,
+    apply: req.apply,
+    rootKey: req.rootKey,
+    useSynonyms: req.useSynonyms,
+    useViews: req.useViews,
+    cqrs: req.cqrs,
+    plan: {
+      renames: req.plan.renames.map((op: RenameOp) => ({
+        scope: op.scope,
+        area: op.area,
+        tableFrom: op.tableFrom,
+        tableTo: op.tableTo,
+        columnFrom: op.columnFrom,
+        columnTo: op.columnTo,
+        type: op.type,
+        note: op.note,
+      })),
+    },
+  };
+  return fetchApi<RefactorResponse>('/refactor/run', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
 
 export const runCleanup = (req: CleanupRequest) => {
   const body = {
-      SessionId: req.sessionId,
-      Renames: req.renames.map(op => ({
-          Scope: op.scope,
-          Area: op.area,
-          TableFrom: op.tableFrom,
-          TableTo: op.tableTo,
-          ColumnFrom: op.columnFrom,
-          ColumnTo: op.columnTo,
-          Type: op.type,
-          Note: op.note
-      })),
-      UseSynonyms: req.useSynonyms,
-      UseViews: req.useViews,
-      Cqrs: req.cqrs,
-      AllowDestructive: req.allowDestructive
+    sessionId: req.sessionId,
+    renames: req.renames.map((op: RenameOp) => ({
+      scope: op.scope,
+      area: op.area,
+      tableFrom: op.tableFrom,
+      tableTo: op.tableTo,
+      columnFrom: op.columnFrom,
+      columnTo: op.columnTo,
+      type: op.type,
+      note: op.note,
+    })),
+    useSynonyms: req.useSynonyms,
+    useViews: req.useViews,
+    cqrs: req.cqrs,
+    allowDestructive: req.allowDestructive,
   };
-  return fetchApi<CleanupResponse>("/apply/cleanup", { method: "POST", body: JSON.stringify(body) });
-}
+  return fetchApi<CleanupResponse>('/apply/cleanup', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
 
 export const runCodeFix = (body: CodeFixRequest) => {
-    const apiBody = {
-      RootKey: body.rootKey,
-      Apply: body.apply,
-      Plan: {
-        Renames: body.plan.renames.map(op => ({
-          Scope: op.scope,
-          Area: op.area,
-          TableFrom: op.tableFrom,
-          TableTo: op.tableTo,
-          ColumnFrom: op.columnFrom,
-          ColumnTo: op.columnTo,
-          Type: op.type,
-          Note: op.note
-        }))
-      },
-      IncludeGlobs: body.includeGlobs,
-      ExcludeGlobs: body.excludeGlobs,
-    }
-  return fetchApi<CodeFixResponse>("/codefix/run", { method: "POST", body: JSON.stringify(apiBody) });
-}
+  const apiBody = {
+    rootKey: body.rootKey,
+    apply: body.apply,
+    plan: {
+      renames: body.plan.renames.map((op: RenameOp) => ({
+        scope: op.scope,
+        area: op.area,
+        tableFrom: op.tableFrom,
+        tableTo: op.tableTo,
+        columnFrom: op.columnFrom,
+        columnTo: op.columnTo,
+        type: op.type,
+        note: op.note,
+      })),
+    },
+    includeGlobs: body.includeGlobs,
+    excludeGlobs: body.excludeGlobs,
+  };
+  return fetchApi<CodeFixResponse>('/codefix/run', {
+    method: 'POST',
+    body: JSON.stringify(apiBody),
+  });
+};
