@@ -7,6 +7,7 @@ import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { AddOpDialog } from './add-op-dialog';
 import type { PlanOperation } from '@/lib/types';
+import { ScrollArea } from '../ui/scroll-area';
 
 export function SchemaCard() {
   const { state, refreshSchema } = useAppContext();
@@ -58,7 +59,9 @@ export function SchemaCard() {
               <p className="text-sm">{schema.error}</p>
             </div>
           ) : schema.tables && schema.tables.length > 0 ? (
-            <SchemaViewer tables={schema.tables} onAddOperation={handleAddOperation} />
+            <ScrollArea className="h-96 w-full rounded-md border p-4">
+              <SchemaViewer tables={schema.tables} onAddOperation={handleAddOperation} />
+            </ScrollArea>
           ) : (
             <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
               <Table2 className="mx-auto h-12 w-12 mb-4" />
