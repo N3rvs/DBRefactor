@@ -8,6 +8,7 @@ import type {
   ConnectResponse,
   RefactorRequest,
   RefactorResponse,
+  TableInfo,
 } from './types';
 
 const API_BASE_URL = "http://localhost:5066";
@@ -74,7 +75,7 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 export const analyzeSchema = (req: { sessionId: string }) => {
     return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
         method: "POST",
-        body: JSON.stringify(req)
+        body: JSON.stringify({ SessionId: req.sessionId }) // CORREGIDO: PascalCase
     });
 }
 
