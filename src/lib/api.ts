@@ -11,10 +11,6 @@ import type {
 } from './types';
 
 const pickDefaultBase = () => {
-  // Si el front corre en https, intenta https:7040 (evita mixed content)
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    return "https://localhost:7040";
-  }
   // El puerto por defecto para el backend de DBRefactor
   return "http://localhost:5066"; 
 };
