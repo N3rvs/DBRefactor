@@ -28,11 +28,11 @@ import {
   Bot,
   Play,
   ClipboardCheck,
-  Sparkles,
   AlertTriangle,
-  FileCheck2,
   Eraser,
   RefreshCw,
+  Database,
+  Replace,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -98,6 +98,8 @@ export function PlanBuilder() {
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
+  
+  const [isApplying, setIsApplying] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -171,18 +173,17 @@ export function PlanBuilder() {
       setIsPreviewing(false);
     }
   };
-  
-  const handleSync = async () => {
+
+  const handleApplyDb = async () => {
     if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
     if (pendingOperations.length === 0) {
-      toast({ title: 'Plan al día', description: 'No hay cambios pendientes para sincronizar.' });
+      toast({ title: 'Plan al día', description: 'No hay cambios pendientes para aplicar.' });
       return;
     }
-
-    setIsSyncing(true);
+    setIsApplying(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
 
     const renamesDto = pendingOperations.map(toRenameOp);
@@ -198,7 +199,6 @@ export function PlanBuilder() {
         cqrs,
         plan: { renames: renamesDto },
       });
-      
       dispatch({
         type: 'SET_RESULTS_SUCCESS',
         payload: {
@@ -207,15 +207,72 @@ export function PlanBuilder() {
           dbLog: response.dbLog || null,
         },
       });
+      const newAppliedHashes = new Set(appliedHashes);
+      for (const op of pendingOperations) {
+        newAppliedHashes.add(hashOp(op));
+      }
+      saveAppliedHashes(rootKey, newAppliedHashes);
+      toast({ title: 'Cambios Aplicados en BD', description: 'Los cambios pendientes han sido aplicados a la base de datos.' });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
+      dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
+      toast({ variant: 'destructive', title: 'Error al Aplicar en BD', description: errorMsg });
+    } finally {
+      setIsApplying(false);
+    }
+  };
+  
+  const handleSyncAll = async () => {
+    if (!state.sessionId) {
+      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
+      return;
+    }
+    if (pendingOperations.length === 0) {
+      toast({ title: 'Plan al día', description: 'No hay cambios pendientes para sincronizar.' });
+      return;
+    }
+    setIsSyncing(true);
+    dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
+
+    const renamesDto = pendingOperations.map(toRenameOp);
+    const { useSynonyms, useViews, cqrs } = state.options;
+    const plan = { renames: renamesDto };
+
+    try {
+      // 1. Aplicar en BD
+      const dbResponse = await api.runRefactor({
+        sessionId: state.sessionId,
+        apply: true,
+        rootKey,
+        useSynonyms,
+        useViews,
+        cqrs,
+        plan,
+      });
+
+      // 2. Aplicar en Código
+      const codeFixResponse = await api.runCodeFix({
+        rootKey,
+        apply: true,
+        plan,
+      });
       
-      // Marcar como aplicadas SOLO las que se ejecutaron
+      dispatch({
+        type: 'SET_RESULTS_SUCCESS',
+        payload: {
+          sql: dbResponse.sql || null,
+          codefix: codeFixResponse || null,
+          dbLog: dbResponse.dbLog || null,
+        },
+      });
+      
       const newAppliedHashes = new Set(appliedHashes);
       for (const op of pendingOperations) {
         newAppliedHashes.add(hashOp(op));
       }
       saveAppliedHashes(rootKey, newAppliedHashes);
 
-      toast({ title: 'Sincronización Completa', description: 'Los cambios pendientes han sido aplicados.' });
+      toast({ title: 'Sincronización Completa', description: 'Los cambios pendientes han sido aplicados en BD y código.' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
@@ -224,6 +281,7 @@ export function PlanBuilder() {
       setIsSyncing(false);
     }
   };
+
 
   const handleCleanup = async () => {
     if (!state.sessionId) {
@@ -370,7 +428,7 @@ export function PlanBuilder() {
     }
   }
   
-  const isLoading = state.results.isLoading || isSyncing || isCleaning || isAiLoading || isPreviewing;
+  const isLoading = state.results.isLoading || isApplying || isSyncing || isCleaning || isAiLoading || isPreviewing;
 
   return (
     <>
@@ -486,13 +544,21 @@ export function PlanBuilder() {
                 {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
                 Previsualizar Pendientes ({pendingOperations.length})
             </Button>
-            <Button 
-                onClick={handleSync}
+             <Button 
+                onClick={handleApplyDb}
                 disabled={isLoading || pendingOperations.length === 0}
-                title="Aplica los cambios pendientes y crea objetos de compatibilidad."
+                title="Aplica los cambios pendientes solo en la base de datos."
+            >
+                 {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Database className="mr-2 h-4 w-4"/>}
+                Aplicar a BD ({pendingOperations.length})
+            </Button>
+            <Button 
+                onClick={handleSyncAll}
+                disabled={isLoading || pendingOperations.length === 0}
+                title="Aplica los cambios pendientes en la base de datos y en el repositorio de código."
             >
                  {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                Sincronizar Cambios ({pendingOperations.length})
+                Sincronizar ({pendingOperations.length})
             </Button>
             <Button 
                 onClick={handleCleanup}
