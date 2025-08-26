@@ -8,7 +8,7 @@ import type {
   SqlBundle,
   TableInfo,
 } from '@/lib/types';
-import { analyzeSchema, connectSession, disconnectSession } from '@/lib/api';
+import * as api from '@/lib/api';
 import { normalizeDbSchema } from '@/lib/normalize-db-schema';
 
 // Opciones de generación, separadas de las de UI
@@ -151,16 +151,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshSchema = useCallback(
     async (sessionId: string) => {
       if (!sessionId) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay session ID para analizar.' });
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay ID de sesión para analizar.' });
         return;
       }
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await analyzeSchema({ sessionId });
+        const data = await api.analyzeSchema({ sessionId });
         const tables = normalizeDbSchema(data); 
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (err: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+      } finally {
+        dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
       }
     },
     []
@@ -169,10 +171,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
     try {
-      const res = await connectSession(connectionString);
-      if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
+      const res = await api.connectSession(connectionString);
+      if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      await refreshSchema(res.sessionId); // Auto-refresh schema on connect
+      await refreshSchema(res.sessionId); // <-- Llamada corregida
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
@@ -183,10 +185,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!state.sessionId) return;
     dispatch({ type: 'SESSION_START' });
     try {
-      await disconnectSession(state.sessionId);
+      await api.disconnectSession(state.sessionId);
       dispatch({ type: 'SESSION_END' });
     } catch (e: any) {
-      // Aunque falle la desconexión en el backend, forzamos el estado de desconexión en el frontend.
       dispatch({ type: 'SESSION_END' });
        console.error(e?.message ?? 'No se pudo desconectar.');
     }

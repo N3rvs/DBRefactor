@@ -81,7 +81,7 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 export const analyzeSchema = (req: { sessionId: string }) => {
     return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
         method: "POST",
-        body: JSON.stringify({ SessionId: req.sessionId }) // PascalCase
+        body: JSON.stringify({ SessionId: req.sessionId })
     });
 }
 
@@ -89,13 +89,12 @@ export const analyzeSchema = (req: { sessionId: string }) => {
 export const disconnectSession = (sessionId: string) =>
   fetchApi<void>('/session/disconnect', { 
     method: "POST",
-    body: JSON.stringify({ SessionId: sessionId }) // PascalCase
+    body: JSON.stringify({ SessionId: sessionId })
   });
 
 
 /** 4) Ejecutar refactor con SessionId */
 export const runRefactor = (req: RefactorRequest) => {
-    // Convierte el DTO del frontend a PascalCase para el backend
     const body = {
       SessionId: req.sessionId,
       Apply: req.apply,
@@ -104,7 +103,7 @@ export const runRefactor = (req: RefactorRequest) => {
       UseViews: req.useViews,
       Cqrs: req.cqrs,
       Plan: {
-        Renames: req.plan.renames.map(op => ({ // El plan anidado también debe ser PascalCase
+        Renames: req.plan.renames.map(op => ({
           Scope: op.scope,
           Area: op.area,
           TableFrom: op.tableFrom,

@@ -49,9 +49,8 @@ import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 const toRenameItemDto = (op: PlanOperation): RenameOp => {
-  // Frontend usa PascalCase (Scope), DTO de API espera camelCase (scope)
   return {
-    scope: op.Scope as any,
+    scope: op.Scope,
     area: op.Area,
     tableFrom: op.TableFrom,
     tableTo: op.TableTo,
