@@ -10,12 +10,7 @@ import type {
   RefactorResponse,
 } from './types';
 
-const pickDefaultBase = () => {
-  // El puerto por defecto para el backend de DBRefactor
-  return "http://localhost:5066"; 
-};
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_DBREFACTOR_API ?? pickDefaultBase();
+const API_BASE_URL = "http://localhost:5066";
 
 async function fetchApi<T>(
   path: string,
@@ -39,7 +34,6 @@ async function fetchApi<T>(
 
     clearTimeout(timeout);
     
-    // Si la respuesta no tiene contenido (ej. 204 No Content), devolver null.
     const responseText = await response.text();
     if (!responseText) {
       if (!response.ok) {
