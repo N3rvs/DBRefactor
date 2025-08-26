@@ -171,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo sessionId de la API.');
-      dispatch({ type: 'SESSION_SUCCESS', payload: res });
+      dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
       await refreshSchema(res.sessionId); // Auto-refresh schema on connect
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });

@@ -34,27 +34,29 @@ async function fetchApi<T>(
 
     clearTimeout(timeout);
     
-    const responseText = await response.text();
     // DELETE puede no devolver contenido, y está bien.
-    if (!responseText && response.status !== 204 && response.status !== 200) {
-      if (!response.ok) {
-         throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
-      }
+    if (response.status === 204) {
       return null as T;
     }
 
-    if (!responseText) {
+    const responseText = await response.text();
+    if (!responseText && response.ok) {
       return null as T;
     }
-    
-    const json = JSON.parse(responseText);
 
     if (!response.ok) {
-        const errorMessage = json?.error || json?.message || json?.title || `Error HTTP: ${response.status}`;
-        throw new Error(errorMessage);
+        // Intenta parsear como JSON para obtener un mensaje de error estructurado
+        try {
+            const errorJson = JSON.parse(responseText);
+            const errorMessage = errorJson?.error || errorJson?.message || errorJson?.title || `Error HTTP: ${response.status}`;
+            throw new Error(errorMessage);
+        } catch (e) {
+            // Si no es JSON, usa el texto de la respuesta o el statusText
+            throw new Error(responseText || `Error HTTP: ${response.status} - ${response.statusText}`);
+        }
     }
     
-    return json as T;
+    return JSON.parse(responseText) as T;
 
   } catch (error) {
     clearTimeout(timeout);
@@ -120,7 +122,16 @@ export const runRefactor = (req: RefactorRequest) => {
 export const runCleanup = (req: CleanupRequest) => {
   const body = {
       SessionId: req.sessionId,
-      Renames: req.renames,
+      Renames: req.renames.map(op => ({
+          Scope: op.scope,
+          Area: op.area,
+          TableFrom: op.tableFrom,
+          TableTo: op.tableTo,
+          ColumnFrom: op.columnFrom,
+          ColumnTo: op.columnTo,
+          Type: op.type,
+          Note: op.note
+      })),
       UseSynonyms: req.useSynonyms,
       UseViews: req.useViews,
       Cqrs: req.cqrs,
@@ -129,5 +140,24 @@ export const runCleanup = (req: CleanupRequest) => {
   return fetchApi<CleanupResponse>("/apply/cleanup", { method: "POST", body: JSON.stringify(body) });
 }
 
-export const runCodeFix = (body: CodeFixRequest) =>
-  fetchApi<CodeFixResponse>("/codefix/run", { method: "POST", body: JSON.stringify(body) });
+export const runCodeFix = (body: CodeFixRequest) => {
+    const apiBody = {
+      RootKey: body.rootKey,
+      Apply: body.apply,
+      Plan: {
+        Renames: body.plan.renames.map(op => ({
+          Scope: op.scope,
+          Area: op.area,
+          TableFrom: op.tableFrom,
+          TableTo: op.tableTo,
+          ColumnFrom: op.columnFrom,
+          ColumnTo: op.columnTo,
+          Type: op.type,
+          Note: op.note
+        }))
+      },
+      IncludeGlobs: body.includeGlobs,
+      ExcludeGlobs: body.excludeGlobs,
+    }
+  return fetchApi<CodeFixResponse>("/codefix/run", { method: "POST", body: JSON.stringify(apiBody) });
+}
