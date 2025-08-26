@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   FileCheck2,
   Eraser,
+  RefreshCw,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -48,7 +49,36 @@ import { getAiRefactoringSuggestion } from '@/app/actions';
 import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
-const toRenameItemDto = (op: PlanOperation): RenameOp => {
+
+// --- Funciones de Sincronización ---
+
+// Hash estable para una operación
+function hashOp(op: PlanOperation): string {
+  const { id, ...rest } = op; // Excluir ID de UI
+  const ordered = JSON.stringify(rest, Object.keys(rest).sort());
+  let h = 0;
+  for (let i = 0; i < ordered.length; i++) {
+    h = (h * 31 + ordered.charCodeAt(i)) | 0;
+  }
+  return String(h);
+}
+
+const STORAGE_KEY = (repoKeyOrPath: string) => `dbrefactor.applied.${repoKeyOrPath}`;
+
+function loadAppliedHashes(repo: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  const raw = localStorage.getItem(STORAGE_KEY(repo));
+  return new Set<string>(raw ? JSON.parse(raw) : []);
+}
+
+function saveAppliedHashes(repo: string, set: Set<string>) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(STORAGE_KEY(repo), JSON.stringify([...set]));
+}
+
+// --- Componente ---
+
+const toRenameOp = (op: PlanOperation): RenameOp => {
   return {
     scope: op.Scope,
     area: op.Area,
@@ -68,10 +98,18 @@ export function PlanBuilder() {
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiRationale, setAiRationale] = useState<string | null>(null);
-  const [isApplying, setIsApplying] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
+  
+  const { rootKey } = state.options;
+  const appliedHashes = useMemo(() => loadAppliedHashes(rootKey), [rootKey]);
 
+  const pendingOperations = useMemo(
+    () => state.plan.filter(op => !appliedHashes.has(hashOp(op))),
+    [state.plan, appliedHashes]
+  );
+  
   const hasDestructiveOps = useMemo(
     () => state.plan.some(op => op && op.Scope && op.Scope.startsWith('drop-')),
     [state.plan]
@@ -92,24 +130,24 @@ export function PlanBuilder() {
   };
   
   const handlePreview = async () => {
-     if (!state.sessionId) {
+    if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
-    if (state.plan.length === 0) {
-      toast({ title: 'Plan Vacío', description: 'Agregue al menos una operación al plan.' });
+    if (pendingOperations.length === 0) {
+      toast({ title: 'Plan al día', description: 'No hay operaciones pendientes para previsualizar.' });
       return;
     }
     setIsPreviewing(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
     
-    const renamesDto = state.plan.map(toRenameItemDto);
-    const { rootKey, useSynonyms, useViews, cqrs } = state.options;
+    const renamesDto = pendingOperations.map(toRenameOp);
+    const { useSynonyms, useViews, cqrs } = state.options;
 
     try {
       const response = await api.runRefactor({
         sessionId: state.sessionId,
-        apply: false, // Preview no aplica cambios
+        apply: false,
         rootKey,
         useSynonyms,
         useViews,
@@ -124,7 +162,7 @@ export function PlanBuilder() {
           dbLog: response.dbLog || null,
         },
       });
-      toast({ title: 'Previsualización Generada', description: 'Los resultados de la previsualización están listos.' });
+      toast({ title: 'Previsualización Generada', description: 'Los resultados de los cambios pendientes están listos.' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
@@ -134,21 +172,21 @@ export function PlanBuilder() {
     }
   };
   
-  const handleApply = async () => {
+  const handleSync = async () => {
     if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
       return;
     }
-    if (state.plan.length === 0) {
-      toast({ title: 'Plan Vacío', description: 'Agregue al menos una operación al plan.' });
+    if (pendingOperations.length === 0) {
+      toast({ title: 'Plan al día', description: 'No hay cambios pendientes para sincronizar.' });
       return;
     }
 
-    setIsApplying(true);
+    setIsSyncing(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
 
-    const renamesDto = state.plan.map(toRenameItemDto);
-    const { rootKey, useSynonyms, useViews, cqrs } = state.options;
+    const renamesDto = pendingOperations.map(toRenameOp);
+    const { useSynonyms, useViews, cqrs } = state.options;
 
     try {
       const response = await api.runRefactor({
@@ -169,13 +207,21 @@ export function PlanBuilder() {
           dbLog: response.dbLog || null,
         },
       });
-      toast({ title: 'Plan Aplicado Correctamente', description: 'Los renames y la compatibilidad se han ejecutado en la base de datos.' });
+      
+      // Marcar como aplicadas SOLO las que se ejecutaron
+      const newAppliedHashes = new Set(appliedHashes);
+      for (const op of pendingOperations) {
+        newAppliedHashes.add(hashOp(op));
+      }
+      saveAppliedHashes(rootKey, newAppliedHashes);
+
+      toast({ title: 'Sincronización Completa', description: 'Los cambios pendientes han sido aplicados.' });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
       dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
-      toast({ variant: 'destructive', title: 'Error al Aplicar', description: errorMsg });
+      toast({ variant: 'destructive', title: 'Error al Sincronizar', description: errorMsg });
     } finally {
-      setIsApplying(false);
+      setIsSyncing(false);
     }
   };
 
@@ -199,7 +245,7 @@ export function PlanBuilder() {
     setIsCleaning(true);
     dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
 
-    const renamesDto = state.plan.map(toRenameItemDto);
+    const renamesDto = state.plan.map(toRenameOp);
     const { useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
     try {
@@ -216,7 +262,7 @@ export function PlanBuilder() {
         type: 'SET_RESULTS_SUCCESS',
         payload: {
           sql: response.sql || null,
-          codefix: null, // Cleanup no genera codefix
+          codefix: null,
           dbLog: response.log || null,
         },
       });
@@ -254,7 +300,6 @@ export function PlanBuilder() {
       });
       
       const newOrderedPlan = aiResult.orderedRenames.map(op => {
-        // La IA devuelve camelCase, lo normalizamos a PascalCase para el estado
         return {
           Scope: op.scope,
           Area: op.area,
@@ -277,15 +322,16 @@ export function PlanBuilder() {
     }
   };
 
-  const getScopeBadge = (scope: string) => {
+  const getScopeBadge = (scope: string, isApplied: boolean) => {
+    const baseClasses = isApplied ? 'opacity-50' : '';
     switch (scope) {
-      case 'table': return <Badge variant="secondary">Renombrar Tabla</Badge>;
-      case 'column': return <Badge variant="secondary">Renombrar Columna</Badge>;
-      case 'add-column': return <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30">Añadir Columna</Badge>;
-      case 'drop-column': return <Badge variant="destructive">Eliminar Columna</Badge>;
-      case 'drop-table': return <Badge variant="destructive">Eliminar Tabla</Badge>;
-      case 'drop-index': return <Badge variant="destructive">Eliminar Índice</Badge>;
-      default: return <Badge variant="secondary">{scope}</Badge>;
+      case 'table': return <Badge variant="secondary" className={baseClasses}>Renombrar Tabla</Badge>;
+      case 'column': return <Badge variant="secondary" className={baseClasses}>Renombrar Columna</Badge>;
+      case 'add-column': return <Badge variant="secondary" className={`${baseClasses} bg-blue-500/20 text-blue-300 border-blue-500/30`}>Añadir Columna</Badge>;
+      case 'drop-column': return <Badge variant="destructive" className={baseClasses}>Eliminar Columna</Badge>;
+      case 'drop-table': return <Badge variant="destructive" className={baseClasses}>Eliminar Tabla</Badge>;
+      case 'drop-index': return <Badge variant="destructive" className={baseClasses}>Eliminar Índice</Badge>;
+      default: return <Badge variant="secondary" className={baseClasses}>{scope}</Badge>;
     }
   }
 
@@ -301,7 +347,7 @@ export function PlanBuilder() {
       case 'add-column':
         return tableFromName;
       case 'drop-index':
-        return op.ColumnFrom; // Usando columnFrom para el nombre del índice
+        return op.ColumnFrom;
       default:
         return '-';
     }
@@ -324,7 +370,7 @@ export function PlanBuilder() {
     }
   }
   
-  const isLoading = state.results.isLoading || isApplying || isCleaning || isAiLoading || isPreviewing;
+  const isLoading = state.results.isLoading || isSyncing || isCleaning || isAiLoading || isPreviewing;
 
   return (
     <>
@@ -343,7 +389,7 @@ export function PlanBuilder() {
                     <CardTitle>Plan de Refactorización</CardTitle>
                 </div>
                 <CardDescription>
-                    Cree y ordene su lista de operaciones de refactorización.
+                    Cree y ordene su lista de operaciones. Solo los cambios no aplicados se sincronizarán.
                 </CardDescription>
             </div>
             <Button onClick={handleAddNew} size="sm" disabled={isLoading}>
@@ -357,7 +403,7 @@ export function PlanBuilder() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Operación</TableHead>
+                  <TableHead className="w-[150px]">Operación</TableHead>
                   <TableHead>Desde</TableHead>
                   <TableHead>Hasta</TableHead>
                   <TableHead>Nota</TableHead>
@@ -366,10 +412,12 @@ export function PlanBuilder() {
               </TableHeader>
               <TableBody>
                 {state.plan.length > 0 ? (
-                  state.plan.map((op) => (
-                    <TableRow key={op.id}>
+                  state.plan.map((op) => {
+                    const isApplied = appliedHashes.has(hashOp(op));
+                    return (
+                    <TableRow key={op.id} className={isApplied ? 'bg-muted/30 text-muted-foreground' : ''}>
                       <TableCell>
-                        {getScopeBadge(op.Scope)}
+                        {getScopeBadge(op.Scope, isApplied)}
                       </TableCell>
                       <TableCell className="font-mono text-xs">
                         {renderFrom(op)}
@@ -377,7 +425,7 @@ export function PlanBuilder() {
                       <TableCell className="font-mono text-xs">
                         {renderTo(op)}
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{op.Note || '-'}</TableCell>
+                      <TableCell className="text-sm">{op.Note || '-'}</TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -402,7 +450,7 @@ export function PlanBuilder() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
+                  )})
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
@@ -413,6 +461,12 @@ export function PlanBuilder() {
               </TableBody>
             </Table>
           </div>
+           {pendingOperations.length === 0 && state.plan.length > 0 && (
+             <div className="mt-4 p-3 rounded-md bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-3">
+                <ClipboardCheck className="h-5 w-5" />
+                <p>¡Todo sincronizado! No hay cambios pendientes.</p>
+             </div>
+           )}
           {hasDestructiveOps && (
             <div className="mt-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-3">
               <AlertTriangle className="h-5 w-5" />
@@ -428,17 +482,17 @@ export function PlanBuilder() {
                 {isAiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
                 Sugerir Orden (IA)
             </Button>
-             <Button variant="outline" onClick={handlePreview} disabled={isLoading || state.plan.length === 0}>
+             <Button variant="outline" onClick={handlePreview} disabled={isLoading || pendingOperations.length === 0}>
                 {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
-                Previsualizar
+                Previsualizar Pendientes ({pendingOperations.length})
             </Button>
             <Button 
-                onClick={handleApply}
-                disabled={isLoading || state.plan.length === 0}
-                title="Aplica los cambios de refactorización y crea objetos de compatibilidad. No elimina datos."
+                onClick={handleSync}
+                disabled={isLoading || pendingOperations.length === 0}
+                title="Aplica los cambios pendientes y crea objetos de compatibilidad."
             >
-                 {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <FileCheck2 className="mr-2 h-4 w-4"/>}
-                Aplicar Plan
+                 {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
+                Sincronizar Cambios ({pendingOperations.length})
             </Button>
             <Button 
                 onClick={handleCleanup}
