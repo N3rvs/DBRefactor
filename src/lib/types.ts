@@ -60,7 +60,7 @@ export type SqlBundle = {
   cleanupSql?: string;
 };
 
-export type ChangedFile = { path: string; changed: boolean; };
+export type ChangedFile = { Path: string; Changed: boolean; }; // API usa PascalCase aquí
 export type CodeFixRunResult = {
   filesScanned?: number;
   filesChanged?: number;
