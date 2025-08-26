@@ -34,8 +34,7 @@ async function fetchApi<T>(
 
     clearTimeout(timeout);
     
-    // DELETE puede no devolver contenido, y está bien.
-    if (response.status === 204) {
+    if (response.status === 204 && options.method === 'DELETE') {
       return null as T;
     }
 
@@ -45,13 +44,11 @@ async function fetchApi<T>(
     }
 
     if (!response.ok) {
-        // Intenta parsear como JSON para obtener un mensaje de error estructurado
         try {
             const errorJson = JSON.parse(responseText);
             const errorMessage = errorJson?.error || errorJson?.message || errorJson?.title || `Error HTTP: ${response.status}`;
             throw new Error(errorMessage);
         } catch (e) {
-            // Si no es JSON, usa el texto de la respuesta o el statusText
             throw new Error(responseText || `Error HTTP: ${response.status} - ${response.statusText}`);
         }
     }
