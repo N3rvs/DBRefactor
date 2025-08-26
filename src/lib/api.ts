@@ -75,13 +75,17 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 export const analyzeSchema = (req: { sessionId: string }) => {
     return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
         method: "POST",
-        body: JSON.stringify({ SessionId: req.sessionId })
+        body: JSON.stringify({ SessionId: req.sessionId }) // PascalCase
     });
 }
 
 /** 3) Desconectar sesión (opcional) */
 export const disconnectSession = (sessionId: string) =>
-  fetchApi<void>(`/session/${sessionId}`, { method: "DELETE" });
+  fetchApi<void>('/session/disconnect', { 
+    method: "POST",
+    body: JSON.stringify({ sessionId }) 
+  });
+
 
 /** 4) Ejecutar refactor con SessionId */
 export const runRefactor = (req: RefactorRequest) =>
