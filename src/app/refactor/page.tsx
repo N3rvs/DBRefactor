@@ -5,6 +5,7 @@ import { RefactorOptions } from '@/components/refactor/refactor-options';
 import { RepoCard } from '@/components/refactor/repo-card';
 import { ResultPanel } from '@/components/refactor/result-panel';
 import { SchemaCard } from '@/components/refactor/schema-card';
+import { SyncCard } from '@/components/refactor/sync-card';
 
 export default function RefactorPage() {
   return (
@@ -13,6 +14,7 @@ export default function RefactorPage() {
         <aside className="lg:col-span-1 flex flex-col gap-8 sticky top-20">
           <ConnectionCard />
           <RepoCard />
+          <SyncCard />
           <RefactorOptions />
         </aside>
         <main className="lg:col-span-2 flex flex-col gap-8">

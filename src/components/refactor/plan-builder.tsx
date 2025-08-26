@@ -100,7 +100,6 @@ export function PlanBuilder() {
   const [aiRationale, setAiRationale] = useState<string | null>(null);
   
   const [isApplying, setIsApplying] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   
@@ -221,67 +220,6 @@ export function PlanBuilder() {
       setIsApplying(false);
     }
   };
-  
-  const handleSyncAll = async () => {
-    if (!state.sessionId) {
-      toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
-      return;
-    }
-    if (pendingOperations.length === 0) {
-      toast({ title: 'Plan al día', description: 'No hay cambios pendientes para sincronizar.' });
-      return;
-    }
-    setIsSyncing(true);
-    dispatch({ type: 'SET_RESULTS_LOADING', payload: true });
-
-    const renamesDto = pendingOperations.map(toRenameOp);
-    const { useSynonyms, useViews, cqrs } = state.options;
-    const plan = { renames: renamesDto };
-
-    try {
-      // 1. Aplicar en BD
-      const dbResponse = await api.runRefactor({
-        sessionId: state.sessionId,
-        apply: true,
-        rootKey,
-        useSynonyms,
-        useViews,
-        cqrs,
-        plan,
-      });
-
-      // 2. Aplicar en Código
-      const codeFixResponse = await api.runCodeFix({
-        rootKey,
-        apply: true,
-        plan,
-      });
-      
-      dispatch({
-        type: 'SET_RESULTS_SUCCESS',
-        payload: {
-          sql: dbResponse.sql || null,
-          codefix: codeFixResponse || null,
-          dbLog: dbResponse.dbLog || null,
-        },
-      });
-      
-      const newAppliedHashes = new Set(appliedHashes);
-      for (const op of pendingOperations) {
-        newAppliedHashes.add(hashOp(op));
-      }
-      saveAppliedHashes(rootKey, newAppliedHashes);
-
-      toast({ title: 'Sincronización Completa', description: 'Los cambios pendientes han sido aplicados en BD y código.' });
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Ocurrió un error desconocido';
-      dispatch({ type: 'SET_RESULTS_ERROR', payload: errorMsg });
-      toast({ variant: 'destructive', title: 'Error al Sincronizar', description: errorMsg });
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
 
   const handleCleanup = async () => {
     if (!state.sessionId) {
@@ -428,7 +366,7 @@ export function PlanBuilder() {
     }
   }
   
-  const isLoading = state.results.isLoading || isApplying || isSyncing || isCleaning || isAiLoading || isPreviewing;
+  const isLoading = state.results.isLoading || isApplying || isCleaning || isAiLoading || isPreviewing;
 
   return (
     <>
@@ -542,7 +480,7 @@ export function PlanBuilder() {
             </Button>
              <Button variant="outline" onClick={handlePreview} disabled={isLoading || pendingOperations.length === 0}>
                 {isPreviewing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Play className="mr-2 h-4 w-4"/>}
-                Previsualizar Pendientes ({pendingOperations.length})
+                Previsualizar ({pendingOperations.length})
             </Button>
              <Button 
                 onClick={handleApplyDb}
@@ -551,14 +489,6 @@ export function PlanBuilder() {
             >
                  {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Database className="mr-2 h-4 w-4"/>}
                 Aplicar a BD ({pendingOperations.length})
-            </Button>
-            <Button 
-                onClick={handleSyncAll}
-                disabled={isLoading || pendingOperations.length === 0}
-                title="Aplica los cambios pendientes en la base de datos y en el repositorio de código."
-            >
-                 {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <RefreshCw className="mr-2 h-4 w-4"/>}
-                Sincronizar ({pendingOperations.length})
             </Button>
             <Button 
                 onClick={handleCleanup}
