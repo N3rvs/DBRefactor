@@ -11,7 +11,7 @@ import type {
   TableInfo,
 } from './types';
 
-const API_BASE_URL = "http://localhost:5066";
+const API_BASE_URL = 'http://localhost:5066';
 
 async function fetchApi<T>(
   path: string,
@@ -27,7 +27,7 @@ async function fetchApi<T>(
       ...options,
       headers: {
         'Accept': 'application/json',
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...((options.method === 'POST' || options.method === 'PUT') && options.body ? { "Content-Type": "application/json" } : {}),
         ...options.headers,
       },
       signal: controller.signal,
@@ -75,13 +75,13 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 export const analyzeSchema = (req: { sessionId: string }) => {
     return fetchApi<AnalyzeSchemaResponse>('/analyze/schema/session', { 
         method: "POST",
-        body: JSON.stringify({ SessionId: req.sessionId }) // CORREGIDO: PascalCase
+        body: JSON.stringify({ SessionId: req.sessionId })
     });
 }
 
 /** 3) Desconectar sesión (opcional) */
 export const disconnectSession = (sessionId: string) =>
-  fetchApi<void>("/session/disconnect", { method: "POST", body: JSON.stringify({ sessionId }) });
+  fetchApi<void>(`/session/${sessionId}`, { method: "DELETE" });
 
 /** 4) Ejecutar refactor con SessionId */
 export const runRefactor = (req: RefactorRequest) =>
