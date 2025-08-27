@@ -30,9 +30,7 @@ import {
   ClipboardCheck,
   AlertTriangle,
   Eraser,
-  RefreshCw,
   Database,
-  Replace,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -55,7 +53,16 @@ import { AISuggestionDialog } from './ai-suggestion-dialog';
 // Hash estable para una operación
 function hashOp(op: PlanOperation): string {
   const { id, ...rest } = op; // Excluir ID de UI
-  const ordered = JSON.stringify(rest, Object.keys(rest).sort());
+  // Normalizar claves a un formato consistente (ej: camelCase) antes de hashear
+  const normalizedOp: Record<string, any> = {};
+  for (const key in rest) {
+      const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+      normalizedOp[camelKey] = (rest as any)[key];
+  }
+  const ordered = JSON.stringify(
+    normalizedOp,
+    Object.keys(normalizedOp).sort()
+  );
   let h = 0;
   for (let i = 0; i < ordered.length; i++) {
     h = (h * 31 + ordered.charCodeAt(i)) | 0;
@@ -144,7 +151,7 @@ export function PlanBuilder() {
     
     const renamesDto = pendingOperations.map(toRenameOp);
     const { useSynonyms, useViews, cqrs } = state.options;
-
+    
     try {
       const response = await api.runRefactor({
         sessionId: state.sessionId,
@@ -504,3 +511,5 @@ export function PlanBuilder() {
     </>
   );
 }
+
+    

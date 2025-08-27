@@ -8,7 +8,6 @@ import type {
   ConnectResponse,
   RefactorRequest,
   RefactorResponse,
-  RenameOp,
 } from './types';
 
 const API_BASE_URL = 'http://localhost:5066';
@@ -37,13 +36,11 @@ async function fetchApi<T>(
 
     clearTimeout(timeout);
 
-    // DELETE puede no devolver contenido
-    if (response.status === 204 && options.method === 'DELETE') {
+    if (response.status === 204) {
       return null as T;
     }
 
     const responseText = await response.text();
-    // Algunas respuestas OK pueden no tener cuerpo
     if (!responseText && response.ok) {
       return null as T;
     }
@@ -55,6 +52,7 @@ async function fetchApi<T>(
           errorJson?.error ||
           errorJson?.message ||
           errorJson?.title ||
+          errorJson?.detail || // Añadir "detail" que a veces usan las APIs .NET
           `Error HTTP: ${response.status}`;
         throw new Error(errorMessage);
       } catch (e) {
@@ -86,92 +84,42 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
     body: JSON.stringify({ connectionString, ttlSeconds }),
   });
 
-/** 2) Analizar esquema usando GET y connectionString (endpoint recomendado por la guía) */
+/** 2) Analizar esquema usando GET con connectionString (según guía) */
 export const analyzeSchema = (connectionString: string) => {
   const url = new URL(`${API_BASE_URL}/analyze/schema`);
   url.searchParams.set('connectionString', connectionString);
-  return fetchApi<AnalyzeSchemaResponse>(url.pathname + url.search);
+  // fetchApi espera solo el path, por eso lo separamos
+  return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
 };
 
-/** 3) Desconectar sesión (opcional) */
+/** 3) Desconectar sesión (opción recomendada: DELETE) */
 export const disconnectSession = (sessionId: string) =>
   fetchApi<void>(`/session/${sessionId}`, {
     method: 'DELETE',
   });
 
-/** 4) Ejecutar refactor con SessionId */
+/** 4) Ejecutar refactor con SessionId (o los otros métodos) */
 export const runRefactor = (req: RefactorRequest) => {
-  const body = {
-    sessionId: req.sessionId,
-    apply: req.apply,
-    rootKey: req.rootKey,
-    useSynonyms: req.useSynonyms,
-    useViews: req.useViews,
-    cqrs: req.cqrs,
-    plan: {
-      renames: req.plan.renames.map((op: RenameOp) => ({
-        scope: op.scope,
-        area: op.area,
-        tableFrom: op.tableFrom,
-        tableTo: op.tableTo,
-        columnFrom: op.columnFrom,
-        columnTo: op.columnTo,
-        type: op.type,
-        note: op.note,
-      })),
-    },
-  };
   return fetchApi<RefactorResponse>('/refactor/run', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(req), // El objeto ya tiene el formato correcto (camelCase)
   });
 };
 
+/** 5) Ejecutar limpieza de compatibilidad */
 export const runCleanup = (req: CleanupRequest) => {
-  const body = {
-    sessionId: req.sessionId,
-    renames: req.renames.map((op: RenameOp) => ({
-      scope: op.scope,
-      area: op.area,
-      tableFrom: op.tableFrom,
-      tableTo: op.tableTo,
-      columnFrom: op.columnFrom,
-      columnTo: op.columnTo,
-      type: op.type,
-      note: op.note,
-    })),
-    useSynonyms: req.useSynonyms,
-    useViews: req.useViews,
-    cqrs: req.cqrs,
-    allowDestructive: req.allowDestructive,
-  };
   return fetchApi<CleanupResponse>('/apply/cleanup', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body: JSON.stringify(req),
   });
 };
 
-export const runCodeFix = (body: CodeFixRequest) => {
-  const apiBody = {
-    rootKey: body.rootKey,
-    apply: body.apply,
-    plan: {
-      renames: body.plan.renames.map((op: RenameOp) => ({
-        scope: op.scope,
-        area: op.area,
-        tableFrom: op.tableFrom,
-        tableTo: op.tableTo,
-        columnFrom: op.columnFrom,
-        columnTo: op.columnTo,
-        type: op.type,
-        note: op.note,
-      })),
-    },
-    includeGlobs: body.includeGlobs,
-    excludeGlobs: body.excludeGlobs,
-  };
+/** 6) Ejecutar CodeFix sobre el repositorio */
+export const runCodeFix = (req: CodeFixRequest) => {
   return fetchApi<CodeFixResponse>('/codefix/run', {
     method: 'POST',
-    body: JSON.stringify(apiBody),
+    body: JSON.stringify(req),
   });
 };
+
+    

@@ -139,7 +139,7 @@ type AppContextValue = {
   dispatch: React.Dispatch<Action>;
   connect: (connectionString: string) => Promise<void>;
   disconnect: () => Promise<void>;
-  refreshSchema: (connectionString?: string) => Promise<void>;
+  refreshSchema: () => Promise<void>; // Ya no necesita argumentos
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -148,39 +148,48 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Variable para guardar temporalmente la CS. NO se guarda en el estado.
+  let transientConnectionString: string | null = null;
+  
   const refreshSchema = useCallback(
-    async (connectionString?: string) => {
-      const cs = connectionString;
-      if (!cs) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'No hay cadena de conexión para analizar.' });
-        return;
-      }
-      dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
-      try {
-        const data = await api.analyzeSchema(cs);
-        const tables = normalizeDbSchema(data); 
-        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
-      } catch (err: any) {
-        dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-      } finally {
-        dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
-      }
+    async (sessionId?: string) => {
+       const id = sessionId || state.sessionId;
+       if (!id) {
+         // No se puede refrescar sin sesión. No es un error, simplemente no se puede.
+         return;
+       }
+       if (!transientConnectionString) {
+         dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'La cadena de conexión no está disponible para refrescar el esquema.' });
+         return;
+       }
+       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+       try {
+         const data = await api.analyzeSchema(transientConnectionString);
+         const tables = normalizeDbSchema(data);
+         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
+       } catch (err: any) {
+         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+       } finally {
+         dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
+       }
     },
-    []
+    [state.sessionId]
   );
-
+  
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
     try {
-      // 1. Guardamos la CS para usarla en analyzeSchema
-      const cs = connectionString;
-      // 2. Creamos la sesión y obtenemos el sessionId
-      const res = await api.connectSession(cs);
+      // 1. Guardar la CS para usarla después en analyzeSchema
+      transientConnectionString = connectionString;
+      // 2. Crear la sesión y obtener el sessionId
+      const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      // 3. Analizamos el esquema usando la CS original
-      await refreshSchema(cs);
+      // 3. Analizar el esquema usando la CS guardada.
+      // El refreshSchema interno ahora usará la CS de la variable de closure.
+      await refreshSchema(res.sessionId);
     } catch (e: any) {
+      transientConnectionString = null; // Limpiar en caso de error
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
@@ -191,17 +200,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SESSION_START' });
     try {
       await api.disconnectSession(state.sessionId);
-      dispatch({ type: 'SESSION_END' });
     } catch (e: any) {
-      dispatch({ type: 'SESSION_END' });
        console.error(e?.message ?? 'No se pudo desconectar.');
+    } finally {
+       transientConnectionString = null; // Limpiar al desconectar
+       dispatch({ type: 'SESSION_END' });
     }
   }, [state.sessionId]);
   
   const refreshSchemaCb = useCallback(async () => {
-    // Esta función ahora no tiene sentido si la CS solo está disponible al conectar.
-    // La mantenemos por si se decide cachear la CS en el estado en un futuro.
-  }, []);
+     await refreshSchema();
+  }, [refreshSchema]);
 
 
   return (
@@ -217,3 +226,5 @@ export function useAppContext(): AppContextValue {
   if (!ctx) throw new Error('useAppContext debe ser usado dentro de un AppProvider');
   return ctx;
 }
+
+    
