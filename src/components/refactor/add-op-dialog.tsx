@@ -81,7 +81,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
     if (typeSelection === 'Personalizado') {
       setIsCustomType(true);
       setValue('Type', '');
-    } else {
+    } else if (typeSelection) { // solo si no es undefined/null
       setIsCustomType(false);
     }
   }, [typeSelection, setValue]);
@@ -143,7 +143,29 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
             </div>
             <div className="space-y-2">
               <Label htmlFor="Type">Tipo (si cambia)</Label>
-              <Input id="Type" {...register('Type')} placeholder="ej., nvarchar(255)" />
+               <Controller
+                name="Type"
+                control={control}
+                render={({ field }) => (
+                  <Select onValueChange={(value) => { field.onChange(value); if (value === 'Personalizado') setIsCustomType(true); else setIsCustomType(false); }} value={field.value ?? undefined}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione un tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sqlDataTypes.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {isCustomType && (
+                <Input
+                  {...register('Type', { required: true })}
+                  placeholder="Especifique el tipo, ej: nvarchar(max)"
+                  className="mt-2"
+                />
+              )}
             </div>
           </>
         );
@@ -167,7 +189,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
                 control={control}
                 rules={{ required: !isCustomType }}
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                  <Select onValueChange={(value) => { field.onChange(value); if (value === 'Personalizado') setIsCustomType(true); else setIsCustomType(false); }} value={field.value ?? undefined}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un tipo" />
                     </SelectTrigger>
@@ -197,7 +219,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit(onSubmit)}>
           <DialogHeader>
             <DialogTitle>{operation ? 'Editar' : 'Añadir'} Operación</DialogTitle>
@@ -205,7 +227,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
               Complete los detalles para la operación de refactorización.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="space-y-2">
               <Label htmlFor="Scope">Ámbito</Label>
               <Controller
@@ -232,7 +254,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
               <Textarea id="Note" {...register('Note')} />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancelar</Button>
             <Button type="submit">Guardar</Button>
           </DialogFooter>
