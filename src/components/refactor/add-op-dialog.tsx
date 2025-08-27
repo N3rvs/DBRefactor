@@ -22,6 +22,7 @@ import { useForm, Controller } from 'react-hook-form';
 import type { PlanOperation } from '@/lib/types';
 import { useAppContext } from '@/contexts/app-context';
 import { useEffect, useState } from 'react';
+import { Switch } from '../ui/switch';
 
 interface AddOpDialogProps {
   isOpen: boolean;
@@ -41,6 +42,8 @@ const sqlDataTypes = [
   'bit', 'uniqueidentifier', 'xml',
   'Personalizado'
 ];
+
+const fkOnDeleteActions = ['NO ACTION', 'CASCADE', 'SET NULL', 'SET DEFAULT'];
 
 const stripSchemaPrefix = (tableName: string | undefined | null): string | undefined | null => {
   if (!tableName) return tableName;
@@ -72,6 +75,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         ColumnTo: '',
         Type: sqlDataTypes[0],
         Note: '',
+        Extra: {},
       });
     }
     setIsCustomType(false);
@@ -212,6 +216,90 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
             </div>
           </>
         );
+      case 'add-pk':
+        return <>
+            <div className="space-y-2">
+                <Label htmlFor="TableFrom">Tabla</Label>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products"/>
+                {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.Name">Nombre de la PK</Label>
+                <Input id="Extra.Name" {...register('Extra.Name', { required: true })} placeholder="Ej: PK_Products"/>
+                 {errors.Extra?.Name && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.Columns">Columnas (separadas por coma)</Label>
+                <Input id="Extra.Columns" {...register('Extra.Columns', { required: true })} placeholder="Ej: ProductID,StoreID"/>
+                 {errors.Extra?.Columns && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+             <div className="flex items-center space-x-2">
+                <Controller name="Extra.Clustered" control={control} render={({ field }) => <Switch id="Extra.Clustered" checked={field.value} onCheckedChange={field.onChange} />} />
+                <Label htmlFor="Extra.Clustered">Agrupado (Clustered)</Label>
+            </div>
+        </>;
+    case 'add-fk':
+        return <>
+            <div className="space-y-2">
+                <Label htmlFor="TableFrom">Tabla de Origen (Desde)</Label>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: OrderDetails"/>
+                {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="ColumnFrom">Columna de Origen (Desde)</Label>
+                <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} placeholder="Ej: ProductID"/>
+                {errors.ColumnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.Name">Nombre de la FK</Label>
+                <Input id="Extra.Name" {...register('Extra.Name', { required: true })} placeholder="Ej: FK_OrderDetails_Products"/>
+                {errors.Extra?.Name && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.RefTable">Tabla de Referencia (Hacia)</Label>
+                <Input id="Extra.RefTable" {...register('Extra.RefTable', { required: true })} placeholder="Ej: Products"/>
+                {errors.Extra?.RefTable && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.RefColumn">Columna de Referencia (Hacia)</Label>
+                <Input id="Extra.RefColumn" {...register('Extra.RefColumn', { required: true })} placeholder="Ej: ProductID"/>
+                {errors.Extra?.RefColumn && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="Extra.OnDelete">Acción al Eliminar (OnDelete)</Label>
+              <Controller
+                name="Extra.OnDelete"
+                control={control}
+                defaultValue="NO ACTION"
+                render={({ field }) => (
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fkOnDeleteActions.map(type => (
+                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+        </>;
+    case 'drop-pk':
+    case 'drop-fk':
+        return <>
+            <div className="space-y-2">
+                <Label htmlFor="TableFrom">Tabla</Label>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products"/>
+                {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="Extra.Name">Nombre de la Restricción (PK o FK)</Label>
+                <Input id="Extra.Name" {...register('Extra.Name', { required: true })} placeholder="Ej: PK_Products"/>
+                {errors.Extra?.Name && <p className="text-destructive text-sm">Este campo es requerido</p>}
+            </div>
+        </>;
       default:
         return null;
     }
@@ -243,6 +331,10 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
                       <SelectItem value="table">Renombrar Tabla</SelectItem>
                       <SelectItem value="column">Renombrar Columna</SelectItem>
                       <SelectItem value="add-column">Añadir Columna</SelectItem>
+                      <SelectItem value="add-pk">Añadir PK</SelectItem>
+                      <SelectItem value="drop-pk">Eliminar PK</SelectItem>
+                      <SelectItem value="add-fk">Añadir FK</SelectItem>
+                      <SelectItem value="drop-fk">Eliminar FK</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

@@ -31,6 +31,8 @@ import {
   AlertTriangle,
   Eraser,
   Database,
+  KeyRound,
+  Link,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -95,6 +97,7 @@ const toRenameOp = (op: PlanOperation): RenameOp => {
     columnTo: op.ColumnTo,
     type: op.Type,
     note: op.Note,
+    extra: op.Extra,
   };
 };
 
@@ -119,7 +122,7 @@ export function PlanBuilder() {
   );
   
   const hasDestructiveOps = useMemo(
-    () => state.plan.some(op => op && op.Scope && op.Scope.startsWith('drop-')),
+    () => state.plan.some(op => op && op.Scope && (op.Scope.startsWith('drop-') || op.Extra?.AllowDestructive)),
     [state.plan]
   );
   
@@ -334,6 +337,10 @@ export function PlanBuilder() {
       case 'drop-column': return <Badge variant="destructive" className={baseClasses}>Eliminar Columna</Badge>;
       case 'drop-table': return <Badge variant="destructive" className={baseClasses}>Eliminar Tabla</Badge>;
       case 'drop-index': return <Badge variant="destructive" className={baseClasses}>Eliminar Índice</Badge>;
+      case 'add-pk': return <Badge variant="outline" className={`${baseClasses} text-amber-300 border-amber-500/30`}><KeyRound className="mr-1 h-3 w-3" /> Añadir PK</Badge>;
+      case 'drop-pk': return <Badge variant="destructive" className={baseClasses}><KeyRound className="mr-1 h-3 w-3" /> Eliminar PK</Badge>;
+      case 'add-fk': return <Badge variant="outline" className={`${baseClasses} text-cyan-300 border-cyan-500/30`}><Link className="mr-1 h-3 w-3" /> Añadir FK</Badge>;
+      case 'drop-fk': return <Badge variant="destructive" className={baseClasses}><Link className="mr-1 h-3 w-3" /> Eliminar FK</Badge>;
       default: return <Badge variant="secondary" className={baseClasses}>{scope}</Badge>;
     }
   }
@@ -348,7 +355,12 @@ export function PlanBuilder() {
       case 'drop-column':
         return `${tableFromName}.${op.ColumnFrom}`;
       case 'add-column':
+      case 'add-pk':
+      case 'drop-pk':
+      case 'drop-fk':
         return tableFromName;
+      case 'add-fk':
+        return `${tableFromName}.${op.ColumnFrom}`;
       case 'drop-index':
         return op.ColumnFrom;
       default:
@@ -364,6 +376,13 @@ export function PlanBuilder() {
         return op.ColumnTo;
       case 'add-column':
         return `${op.ColumnTo} (${op.Type})`;
+      case 'add-pk':
+        return `${op.Extra?.Name} (${op.Extra?.Columns})`;
+      case 'add-fk':
+        return `(${op.Extra?.Name}) → ${op.Extra?.RefTable}.${op.Extra?.RefColumn}`;
+      case 'drop-pk':
+      case 'drop-fk':
+        return op.Extra?.Name;
       case 'drop-table':
       case 'drop-column':
       case 'drop-index':
@@ -408,7 +427,7 @@ export function PlanBuilder() {
                 <TableRow>
                   <TableHead className="w-[150px]">Operación</TableHead>
                   <TableHead>Desde</TableHead>
-                  <TableHead>Hasta</TableHead>
+                  <TableHead>Hasta / Detalles</TableHead>
                   <TableHead>Nota</TableHead>
                   <TableHead className="w-[50px] text-right"></TableHead>
                 </TableRow>
@@ -511,5 +530,3 @@ export function PlanBuilder() {
     </>
   );
 }
-
-    

@@ -11,7 +11,7 @@ export type ConnectionProps = {
 // Representa una operación en la UI. Se convierte a RenameOp antes de enviar a la API.
 export type PlanOperation = {
   id: string; // ID de cliente para la UI
-  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index' | 'add-pk' | 'drop-pk' | 'add-fk' | 'drop-fk';
   Area?: 'write' | 'read' | 'both';
   TableFrom: string;
   TableTo?: string | null;
@@ -19,6 +19,16 @@ export type PlanOperation = {
   ColumnTo?: string | null;
   Type?: string | null;
   Note?: string | null;
+  Extra?: {
+    Name?: string;
+    Columns?: string;
+    Clustered?: boolean;
+    RefTable?: string;
+    RefColumn?: string;
+    OnDelete?: string;
+    AllowDestructive?: boolean;
+    [key: string]: any;
+  } | null;
   Default?: string | null;
   Nullable?: boolean | null;
   Length?: number | null;
@@ -31,7 +41,7 @@ export type PlanOperation = {
 // ---- DTOs para la API (camelCase) ----
 // DTO para una operación de renombrado/refactorización.
 export type RenameOp = {
-  scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index';
+  scope: PlanOperation['Scope'];
   area?: 'write' | 'read' | 'both';
   tableFrom: string;
   tableTo?: string | null;
@@ -39,6 +49,7 @@ export type RenameOp = {
   columnTo?: string | null;
   type?: string | null;
   note?: string | null;
+  extra?: PlanOperation['Extra'] | null;
 };
 
 // DTO para el plan de refactorización.
