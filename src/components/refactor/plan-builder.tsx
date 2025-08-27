@@ -212,7 +212,7 @@ export function PlanBuilder() {
         type: 'SET_RESULTS_SUCCESS',
         payload: {
           sql: response.sql || null,
-          codefix: response.codefix || null,
+          codefix: null, // Ignorar codefix en "Aplicar a BD"
           dbLog: response.dbLog || null,
         },
       });
