@@ -33,12 +33,15 @@ import {
   Database,
   KeyRound,
   Link,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { PlanOperation, RenameOp } from '@/lib/types';
@@ -137,6 +140,10 @@ export function PlanBuilder() {
 
   const handleRemove = (id: string) => {
     dispatch({ type: 'REMOVE_OPERATION', payload: id });
+  };
+
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    dispatch({ type: 'REORDER_OPERATION', payload: { index, direction } });
   };
   
   const handlePreview = async () => {
@@ -433,7 +440,7 @@ export function PlanBuilder() {
               </TableHeader>
               <TableBody>
                 {state.plan.length > 0 ? (
-                  state.plan.map((op) => {
+                  state.plan.map((op, index) => {
                     const isApplied = appliedHashes.has(hashOp(op));
                     return (
                     <TableRow key={op.id} className={isApplied ? 'bg-muted/30 text-muted-foreground' : ''}>
@@ -466,6 +473,15 @@ export function PlanBuilder() {
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
                               Eliminar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => handleMove(index, 'up')} disabled={isLoading || index === 0}>
+                              <ArrowUp className="mr-2 h-4 w-4" />
+                              Mover Arriba
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleMove(index, 'down')} disabled={isLoading || index === state.plan.length - 1}>
+                              <ArrowDown className="mr-2 h-4 w-4" />
+                              Mover Abajo
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

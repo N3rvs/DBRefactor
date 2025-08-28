@@ -62,6 +62,7 @@ type Action =
   | { type: 'UPDATE_OPERATION'; payload: PlanOperation }
   | { type: 'REMOVE_OPERATION'; payload: string } // id
   | { type: 'SET_PLAN'; payload: PlanOperation[] }
+  | { type: 'REORDER_OPERATION'; payload: { index: number; direction: 'up' | 'down' } }
   | { type: 'SET_RESULTS_LOADING'; payload: boolean }
   | { type: 'SET_RESULTS_SUCCESS'; payload: { sql: SqlBundle | null; codefix: CodeFixRunResult | null; dbLog: string | string[] | null } }
   | { type: 'SET_RESULTS_ERROR'; payload: string | null }
@@ -87,6 +88,14 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'SET_PLAN': {
       const planWithIds = action.payload.map((op, i) => (op.id ? op : { ...op, id: `${Date.now()}-${i}` }));
       return { ...state, plan: planWithIds };
+    }
+    case 'REORDER_OPERATION': {
+      const { index, direction } = action.payload;
+      const newPlan = [...state.plan];
+      const [movedItem] = newPlan.splice(index, 1);
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      newPlan.splice(newIndex, 0, movedItem);
+      return { ...state, plan: newPlan };
     }
     case 'SET_RESULTS_LOADING':
       return { ...state, results: { ...initialState.results, isLoading: action.payload } };
