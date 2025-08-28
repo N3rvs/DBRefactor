@@ -88,11 +88,13 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 /** 2) Analizar esquema usando GET con SessionID (según guía) */
 export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
   const url = new URL(`${API_BASE_URL}/analyze/schema`);
-  // El backend espera el sessionId como un query param
-  if (req.sessionId) {
+  
+  // El backend está requiriendo connectionString, así que lo priorizamos si está.
+  // Si no, intentamos con sessionId por si el backend se actualiza.
+  if (req.connectionString) {
+     url.searchParams.set('connectionString', req.connectionString);
+  } else if (req.sessionId) {
     url.searchParams.set('sessionId', req.sessionId);
-  } else if (req.connectionString) {
-    url.searchParams.set('connectionString', req.connectionString);
   } else {
     throw new Error('Se requiere sessionId o connectionString para analizar el esquema.');
   }

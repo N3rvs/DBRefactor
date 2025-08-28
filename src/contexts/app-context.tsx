@@ -45,6 +45,8 @@ export interface AppState {
   sessionExpiresAt: string | null;
   sessionIsLoading: boolean;
   sessionError: string | null;
+  // Campo temporal para el flujo de conexión
+  _tempConnectionString?: string | null;
 }
 
 const initialState: AppState = {
@@ -56,6 +58,7 @@ const initialState: AppState = {
   sessionExpiresAt: null,
   sessionIsLoading: false,
   sessionError: null,
+  _tempConnectionString: null,
 };
 
 // ---------- ACTIONS ----------
@@ -73,10 +76,11 @@ type Action =
   | { type: 'SET_SCHEMA_SUCCESS'; payload: TableInfo[] }
   | { type: 'SET_SCHEMA_ERROR'; payload: string | null }
   | { type: 'SET_OPTION'; payload: { key: keyof AppState['options']; value: any } }
-  | { type: 'SESSION_START' }
+  | { type: 'SESSION_START'; payload: { connectionString: string } }
   | { type: 'SESSION_SUCCESS'; payload: { sessionId: string; expiresAtUtc: string } }
   | { type: 'SESSION_ERROR'; payload: string }
-  | { type: 'SESSION_END' };
+  | { type: 'SESSION_END' }
+  | { type: 'CLEAR_TEMP_CONNECTION_STRING' };
 
 // ---------- REDUCER ----------
 const appReducer = (state: AppState, action: Action): AppState => {
@@ -116,7 +120,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
     case 'SET_OPTION':
       return { ...state, options: { ...state.options, [action.payload.key]: action.payload.value } };
     case 'SESSION_START':
-      return { ...state, sessionIsLoading: true, sessionError: null };
+      return { ...state, sessionIsLoading: true, sessionError: null, _tempConnectionString: action.payload.connectionString };
     case 'SESSION_SUCCESS':
       return {
         ...state,
@@ -131,6 +135,7 @@ const appReducer = (state: AppState, action: Action): AppState => {
         sessionError: action.payload,
         sessionId: null,
         sessionExpiresAt: null,
+        _tempConnectionString: null, // Limpiar en caso de error
       };
     case 'SESSION_END':
       return {
@@ -143,6 +148,8 @@ const appReducer = (state: AppState, action: Action): AppState => {
         plan: initialState.plan,       // Limpiar plan al desconectar
         results: initialState.results, // Limpiar resultados al desconectar
       };
+     case 'CLEAR_TEMP_CONNECTION_STRING':
+      return { ...state, _tempConnectionString: null };
     default:
       return state;
   }
@@ -167,35 +174,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(async () => {
+    // Para refrescar manualmente, necesitamos el sessionId. 
+    // Si el backend no lo soporta, esta función podría necesitar la connection string de nuevo.
+    // Por ahora, asumimos que se puede refrescar con sessionId si ya se tiene una sesión.
     if (!state.sessionId) {
-      // No intentar refrescar si no hay sesión
       return;
     }
     dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
     try {
-      // Usar el sessionId del estado actual
       const data = await api.analyzeSchema({ sessionId: state.sessionId });
       const tables = normalizeDbSchema(data);
       dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
     } catch (err: any) {
       dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-    } finally {
-      // Ya no es necesario poner el loading en false aquí, porque SET_SCHEMA_SUCCESS/ERROR lo hacen
     }
   }, [state.sessionId]);
   
   const connect = useCallback(async (connectionString: string) => {
-    dispatch({ type: 'SESSION_START' });
+    dispatch({ type: 'SESSION_START', payload: { connectionString } });
     try {
+      // 1. Obtener sessionId
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
 
-      // Cargar esquema después de una conexión exitosa
+      // 2. Cargar esquema usando la connectionString, ya que el backend lo requiere.
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
-        const data = await api.analyzeSchema({ sessionId: res.sessionId });
+        const data = await api.analyzeSchema({ connectionString });
         const tables = normalizeDbSchema(data);
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (schemaErr: any) {
@@ -204,13 +211,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
-      throw e;
+      throw e; // Relanzar para que el componente de UI pueda manejarlo
+    } finally {
+      // 3. Limpiar la connection string temporal del estado
+      dispatch({ type: 'CLEAR_TEMP_CONNECTION_STRING' });
     }
   }, []);
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;
-    dispatch({ type: 'SESSION_START' });
+    dispatch({ type: 'SESSION_START', payload: { connectionString: '' } }); // No necesitamos conn string aquí
     try {
       await api.disconnectSession(state.sessionId);
     } catch (e: any) {
