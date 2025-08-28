@@ -166,25 +166,23 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
-  const refreshSchema = useCallback(
-    async (sessionIdOverride?: string) => {
-       const sessionId = sessionIdOverride ?? state.sessionId;
-       if (!sessionId) {
-         return;
-       }
-       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
-       try {
-         const data = await api.analyzeSchema({ sessionId });
-         const tables = normalizeDbSchema(data);
-         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
-       } catch (err: any) {
-         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-       } finally {
-         dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
-       }
-    },
-    [state.sessionId]
-  );
+  const refreshSchema = useCallback(async () => {
+    if (!state.sessionId) {
+      // No intentar refrescar si no hay sesión
+      return;
+    }
+    dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+    try {
+      // Usar el sessionId del estado actual
+      const data = await api.analyzeSchema({ sessionId: state.sessionId });
+      const tables = normalizeDbSchema(data);
+      dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
+    } catch (err: any) {
+      dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+    } finally {
+      // Ya no es necesario poner el loading en false aquí, porque SET_SCHEMA_SUCCESS/ERROR lo hacen
+    }
+  }, [state.sessionId]);
   
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
@@ -192,17 +190,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       
-      // Dispatch síncrono para que el estado de sessionId se actualice antes de seguir
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
 
-      // Llamar a refreshSchema con el nuevo ID directamente, sin depender del estado asíncrono
-      await refreshSchema(res.sessionId);
+      // Cargar esquema después de una conexión exitosa
+      dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+      try {
+        const data = await api.analyzeSchema({ sessionId: res.sessionId });
+        const tables = normalizeDbSchema(data);
+        dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
+      } catch (schemaErr: any) {
+        dispatch({ type: 'SET_SCHEMA_ERROR', payload: schemaErr?.message ?? 'Error al analizar esquema' });
+      }
 
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
-  }, [refreshSchema]);
+  }, []);
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;

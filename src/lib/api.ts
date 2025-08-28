@@ -88,6 +88,7 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 /** 2) Analizar esquema usando GET con SessionID (según guía) */
 export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
   const url = new URL(`${API_BASE_URL}/analyze/schema`);
+  // El backend espera el sessionId como un query param
   if (req.sessionId) {
     url.searchParams.set('sessionId', req.sessionId);
   } else if (req.connectionString) {
@@ -95,9 +96,11 @@ export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
   } else {
     throw new Error('Se requiere sessionId o connectionString para analizar el esquema.');
   }
-  // fetchApi espera solo el path, por eso lo separamos
+
+  // fetchApi espera solo el path y el search, no el host base.
   return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
 };
+
 
 /** 3) Desconectar sesión (opción recomendada: DELETE) */
 export const disconnectSession = (sessionId: string) =>
