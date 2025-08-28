@@ -62,6 +62,8 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
   const typeSelection = watch('Type');
   const [isCustomType, setIsCustomType] = useState(false);
 
+  const isEditing = !!operation;
+
   useEffect(() => {
     if (operation) {
       const { id, ...dto } = operation;
@@ -117,7 +119,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla Original</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands" />
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands" disabled={isEditing} />
               {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -132,12 +134,12 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands"/>
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands" disabled={isEditing} />
               {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="ColumnFrom">Columna Original</Label>
-              <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} />
+              <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} disabled={isEditing} />
               {errors.ColumnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -178,7 +180,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
           <>
             <div className="space-y-2">
               <Label htmlFor="TableFrom">Tabla</Label>
-              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands"/>
+              <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Brands" disabled={isEditing} />
                {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -220,7 +222,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return <>
             <div className="space-y-2">
                 <Label htmlFor="TableFrom">Tabla</Label>
-                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products"/>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products" disabled={isEditing} />
                 {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -242,12 +244,12 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return <>
             <div className="space-y-2">
                 <Label htmlFor="TableFrom">Tabla de Origen (Desde)</Label>
-                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: OrderDetails"/>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: OrderDetails" disabled={isEditing} />
                 {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="ColumnFrom">Columna de Origen (Desde)</Label>
-                <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} placeholder="Ej: ProductID"/>
+                <Input id="ColumnFrom" {...register('ColumnFrom', { required: true })} placeholder="Ej: ProductID" disabled={isEditing} />
                 {errors.ColumnFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
@@ -291,12 +293,12 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
         return <>
             <div className="space-y-2">
                 <Label htmlFor="TableFrom">Tabla</Label>
-                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products"/>
+                <Input id="TableFrom" {...register('TableFrom', { required: true })} placeholder="Ej: Products" disabled={isEditing} />
                 {errors.TableFrom && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
             <div className="space-y-2">
                 <Label htmlFor="Extra.Name">Nombre de la Restricción (PK o FK)</Label>
-                <Input id="Extra.Name" {...register('Extra.Name', { required: true })} placeholder="Ej: PK_Products"/>
+                <Input id="Extra.Name" {...register('Extra.Name', { required: true })} placeholder="Ej: PK_Products" disabled={isEditing} />
                 {errors.Extra?.Name && <p className="text-destructive text-sm">Este campo es requerido</p>}
             </div>
         </>;
@@ -323,7 +325,7 @@ export function AddOpDialog({ isOpen, setIsOpen, operation }: AddOpDialogProps) 
                 control={control}
                 defaultValue="table"
                 render={({ field }) => (
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isEditing}>
                     <SelectTrigger>
                       <SelectValue placeholder="Seleccione un ámbito" />
                     </SelectTrigger>
