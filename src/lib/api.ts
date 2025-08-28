@@ -8,6 +8,7 @@ import type {
   ConnectResponse,
   RefactorRequest,
   RefactorResponse,
+  AnalyzeSchemaRequest,
 } from './types';
 
 const API_BASE_URL = 'http://localhost:5066';
@@ -84,10 +85,16 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
     body: JSON.stringify({ connectionString, ttlSeconds }),
   });
 
-/** 2) Analizar esquema usando GET con connectionString (según guía) */
-export const analyzeSchema = (connectionString: string) => {
+/** 2) Analizar esquema usando GET con SessionID (según guía) */
+export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
   const url = new URL(`${API_BASE_URL}/analyze/schema`);
-  url.searchParams.set('connectionString', connectionString);
+  if (req.sessionId) {
+    url.searchParams.set('sessionId', req.sessionId);
+  } else if (req.connectionString) {
+    url.searchParams.set('connectionString', req.connectionString);
+  } else {
+    throw new Error('Se requiere sessionId o connectionString para analizar el esquema.');
+  }
   // fetchApi espera solo el path, por eso lo separamos
   return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
 };
@@ -121,5 +128,3 @@ export const runCodeFix = (req: CodeFixRequest) => {
     body: JSON.stringify(req),
   });
 };
-
-    

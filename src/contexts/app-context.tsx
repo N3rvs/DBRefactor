@@ -154,7 +154,7 @@ type AppContextValue = {
   dispatch: React.Dispatch<Action>;
   connect: (connectionString: string) => Promise<void>;
   disconnect: () => Promise<void>;
-  refreshSchema: (sessionId: string) => Promise<void>;
+  refreshSchema: () => Promise<void>;
   runRefactor: (req: RefactorRequest) => Promise<RefactorResponse>;
   runCodeFix: (req: CodeFixRequest) => Promise<CodeFixResponse>;
   runCleanup: (req: CleanupRequest) => Promise<CleanupResponse>;
@@ -167,7 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(
-    async (sessionId: string) => {
+    async () => {
+       const sessionId = state.sessionId;
        if (!sessionId) {
          return;
        }
@@ -182,7 +183,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
          dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
        }
     },
-    []
+    [state.sessionId]
   );
   
   const connect = useCallback(async (connectionString: string) => {
@@ -191,12 +192,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      await refreshSchema(res.sessionId);
+      
+      // Ahora se llama a refreshSchema sin argumentos, ya que toma el sessionId del estado.
+      // Pero el estado no se actualiza instantáneamente. Pasamos el ID directamente.
+       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
+       try {
+         const data = await api.analyzeSchema({ sessionId: res.sessionId });
+         const tables = normalizeDbSchema(data);
+         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
+       } catch (err: any) {
+         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
+       } finally {
+         dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
+       }
+
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
-  }, [refreshSchema]);
+  }, []);
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;
