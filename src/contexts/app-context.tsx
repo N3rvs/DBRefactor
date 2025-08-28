@@ -7,6 +7,10 @@ import type {
   CodeFixRunResult,
   SqlBundle,
   TableInfo,
+  RefactorRequest,
+  CleanupRequest,
+  RefactorResponse,
+  CleanupResponse,
 } from '@/lib/types';
 import * as api from '@/lib/api';
 import { normalizeDbSchema } from '@/lib/normalize-db-schema';
@@ -139,7 +143,9 @@ type AppContextValue = {
   dispatch: React.Dispatch<Action>;
   connect: (connectionString: string) => Promise<void>;
   disconnect: () => Promise<void>;
-  refreshSchema: () => Promise<void>; // Ya no necesita argumentos
+  refreshSchema: (connectionString: string) => Promise<void>;
+  runRefactor: (req: RefactorRequest) => Promise<RefactorResponse>;
+  runCleanup: (req: CleanupRequest) => Promise<CleanupResponse>;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -147,24 +153,15 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 // ---------- PROVIDER ----------
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-
-  // Variable para guardar temporalmente la CS. NO se guarda en el estado.
-  let transientConnectionString: string | null = null;
   
   const refreshSchema = useCallback(
-    async (sessionId?: string) => {
-       const id = sessionId || state.sessionId;
-       if (!id) {
-         // No se puede refrescar sin sesión. No es un error, simplemente no se puede.
-         return;
-       }
-       if (!transientConnectionString) {
-         dispatch({ type: 'SET_SCHEMA_ERROR', payload: 'La cadena de conexión no está disponible para refrescar el esquema.' });
+    async (connectionString: string) => {
+       if (!connectionString) {
          return;
        }
        dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
        try {
-         const data = await api.analyzeSchema(transientConnectionString);
+         const data = await api.analyzeSchema(connectionString);
          const tables = normalizeDbSchema(data);
          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
        } catch (err: any) {
@@ -173,23 +170,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
          dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
        }
     },
-    [state.sessionId]
+    []
   );
   
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START' });
     try {
-      // 1. Guardar la CS para usarla después en analyzeSchema
-      transientConnectionString = connectionString;
-      // 2. Crear la sesión y obtener el sessionId
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      // 3. Analizar el esquema usando la CS guardada.
-      // El refreshSchema interno ahora usará la CS de la variable de closure.
-      await refreshSchema(res.sessionId);
+      await refreshSchema(connectionString);
     } catch (e: any) {
-      transientConnectionString = null; // Limpiar en caso de error
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
@@ -203,18 +194,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (e: any) {
        console.error(e?.message ?? 'No se pudo desconectar.');
     } finally {
-       transientConnectionString = null; // Limpiar al desconectar
        dispatch({ type: 'SESSION_END' });
     }
   }, [state.sessionId]);
+
+  const runRefactorCb = useCallback(async (req: RefactorRequest) => {
+    return api.runRefactor(req);
+  }, []);
   
-  const refreshSchemaCb = useCallback(async () => {
-     await refreshSchema();
-  }, [refreshSchema]);
+  const runCleanupCb = useCallback(async (req: CleanupRequest) => {
+    return api.runCleanup(req);
+  }, []);
 
 
   return (
-    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema: refreshSchemaCb }}>
+    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema, runRefactor: runRefactorCb, runCleanup: runCleanupCb }}>
       {children}
     </AppContext.Provider>
   );
@@ -226,5 +220,3 @@ export function useAppContext(): AppContextValue {
   if (!ctx) throw new Error('useAppContext debe ser usado dentro de un AppProvider');
   return ctx;
 }
-
-    

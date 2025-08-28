@@ -46,7 +46,6 @@ import { useAppContext } from '@/contexts/app-context';
 import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getAiRefactoringSuggestion } from '@/app/actions';
-import * as api from '@/lib/api';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
 
 
@@ -102,7 +101,7 @@ const toRenameOp = (op: PlanOperation): RenameOp => {
 };
 
 export function PlanBuilder() {
-  const { state, dispatch } = useAppContext();
+  const { state, dispatch, runRefactor, runCleanup } = useAppContext();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
@@ -156,7 +155,7 @@ export function PlanBuilder() {
     const { useSynonyms, useViews, cqrs } = state.options;
     
     try {
-      const response = await api.runRefactor({
+      const response = await runRefactor({
         sessionId: state.sessionId,
         apply: false,
         rootKey,
@@ -199,7 +198,7 @@ export function PlanBuilder() {
     const { useSynonyms, useViews, cqrs } = state.options;
 
     try {
-      const response = await api.runRefactor({
+      const response = await runRefactor({
         sessionId: state.sessionId,
         apply: true,
         rootKey,
@@ -255,7 +254,7 @@ export function PlanBuilder() {
     const { useSynonyms, useViews, cqrs, allowDestructive } = state.options;
 
     try {
-      const response = await api.runCleanup({
+      const response = await runCleanup({
         sessionId: state.sessionId,
         renames: renamesDto,
         useSynonyms,
