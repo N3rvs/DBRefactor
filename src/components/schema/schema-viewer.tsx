@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import type { TableInfo, ColumnInfo, ForeignKeyInfo, IndexInfo, PlanOperation } from '@/lib/types';
-import { ChevronDown, MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, Pencil, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { useAppContext } from '@/contexts/app-context';
 import { Button } from '../ui/button';
@@ -26,7 +26,7 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
   data: T[] | undefined;
   columns: { key: string; header: string }[];
   caption: string;
-  actions?: (item: T) => React.ReactNode;
+  actions?: (item: T, index: number) => React.ReactNode;
 }) => {
   if (!data || data.length === 0) {
     return <p className="text-sm text-muted-foreground mt-2">{caption} no encontrados.</p>;
@@ -42,7 +42,7 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.map((item) => (
+          {data.map((item, index) => (
             <TableRow key={item.Name}>
               {columns.map(col => (
                 <TableCell key={col.key} className="font-mono text-xs">
@@ -53,7 +53,7 @@ const DetailTable = <T extends { Name: string; [key: string]: any }>({
                       : item[col.key]}
                 </TableCell>
               ))}
-              {actions && <TableCell className="text-right">{actions(item)}</TableCell>}
+              {actions && <TableCell className="text-right">{actions(item, index)}</TableCell>}
             </TableRow>
           ))}
         </TableBody>
@@ -87,6 +87,25 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
 
   const handleDropColumn = (table: TableInfo, column: ColumnInfo) => {
     handleAddSimpleOperation({ Scope: 'drop-column', TableFrom: justTable(table), ColumnFrom: column.Name } as any);
+  };
+  
+  const handleReorderColumn = (table: TableInfo, columnIndex: number, direction: 'up' | 'down') => {
+    const column = table.Columns[columnIndex];
+    const newPosition = direction === 'up' ? columnIndex : columnIndex + 1; // 1-based index for SQL
+    const afterColumn = direction === 'up' 
+      ? (columnIndex > 1 ? table.Columns[columnIndex - 2]?.Name : 'FIRST')
+      : table.Columns[columnIndex - 1]?.Name;
+    
+    handleAddSimpleOperation({
+        Scope: 'reorder-column',
+        TableFrom: justTable(table),
+        ColumnFrom: column.Name,
+        Note: `Mover después de ${afterColumn || 'el principio'}`,
+        Extra: {
+            Position: newPosition,
+            After: afterColumn
+        }
+    } as any);
   };
 
   const stopPropagation = (e: React.SyntheticEvent) => e.stopPropagation();
@@ -142,7 +161,7 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
               data={table.Columns}
               columns={[{ key: 'Name', header: 'Nombre' }, { key: 'SqlType', header: 'Tipo' }]}
               caption="Columnas"
-              actions={(column) => (
+              actions={(column, index) => (
                 <DropdownMenu>
                    <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -161,6 +180,15 @@ export function SchemaViewer({ tables, onAddOperation }: SchemaViewerProps) {
                     >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Eliminar Columna
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleReorderColumn(table, index, 'up')} disabled={index === 0}>
+                        <ArrowUp className="mr-2 h-4 w-4" />
+                        Mover Arriba
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleReorderColumn(table, index, 'down')} disabled={index === table.Columns.length - 1}>
+                        <ArrowDown className="mr-2 h-4 w-4" />
+                        Mover Abajo
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

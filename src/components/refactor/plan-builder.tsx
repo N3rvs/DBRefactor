@@ -35,6 +35,7 @@ import {
   Link,
   ArrowUp,
   ArrowDown,
+  ChevronsUpDown,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -347,6 +348,7 @@ export function PlanBuilder() {
       case 'drop-pk': return <Badge variant="destructive" className={baseClasses}><KeyRound className="mr-1 h-3 w-3" /> Eliminar PK</Badge>;
       case 'add-fk': return <Badge variant="outline" className={`${baseClasses} text-cyan-300 border-cyan-500/30`}><Link className="mr-1 h-3 w-3" /> Añadir FK</Badge>;
       case 'drop-fk': return <Badge variant="destructive" className={baseClasses}><Link className="mr-1 h-3 w-3" /> Eliminar FK</Badge>;
+      case 'reorder-column': return <Badge variant="outline" className={`${baseClasses} text-purple-300 border-purple-500/30`}><ChevronsUpDown className="mr-1 h-3 w-3" />Reordenar Col.</Badge>;
       default: return <Badge variant="secondary" className={baseClasses}>{scope}</Badge>;
     }
   }
@@ -359,6 +361,7 @@ export function PlanBuilder() {
         return tableFromName;
       case 'column':
       case 'drop-column':
+      case 'reorder-column':
         return `${tableFromName}.${op.ColumnFrom}`;
       case 'add-column':
       case 'add-pk':
@@ -386,6 +389,8 @@ export function PlanBuilder() {
         return `${op.Extra?.Name} (${op.Extra?.Columns})`;
       case 'add-fk':
         return `(${op.Extra?.Name}) → ${op.Extra?.RefTable}.${op.Extra?.RefColumn}`;
+      case 'reorder-column':
+        return `Pos: ${op.Extra?.Position} (después de ${op.Extra?.After || 'FIRST'})`;
       case 'drop-pk':
       case 'drop-fk':
         return op.Extra?.Name;

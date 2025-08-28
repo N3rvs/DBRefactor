@@ -11,7 +11,7 @@ export type ConnectionProps = {
 // Representa una operación en la UI. Se convierte a RenameOp antes de enviar a la API.
 export type PlanOperation = {
   id: string; // ID de cliente para la UI
-  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index' | 'add-pk' | 'drop-pk' | 'add-fk' | 'drop-fk';
+  Scope: 'table' | 'column' | 'add-column' | 'drop-column' | 'drop-table' | 'drop-index' | 'add-pk' | 'drop-pk' | 'add-fk' | 'drop-fk' | 'reorder-column';
   Area?: 'write' | 'read' | 'both';
   TableFrom: string;
   TableTo?: string | null;
@@ -27,6 +27,8 @@ export type PlanOperation = {
     RefColumn?: string;
     OnDelete?: string;
     AllowDestructive?: boolean;
+    Position?: number; // Para reordenar columnas
+    After?: string; // Para reordenar columnas
     [key: string]: any;
   } | null;
   Default?: string | null;
