@@ -11,6 +11,8 @@ import type {
   CleanupRequest,
   RefactorResponse,
   CleanupResponse,
+  CodeFixRequest,
+  CodeFixResponse,
 } from '@/lib/types';
 import * as api from '@/lib/api';
 import { normalizeDbSchema } from '@/lib/normalize-db-schema';
@@ -152,8 +154,9 @@ type AppContextValue = {
   dispatch: React.Dispatch<Action>;
   connect: (connectionString: string) => Promise<void>;
   disconnect: () => Promise<void>;
-  refreshSchema: (connectionString: string) => Promise<void>;
+  refreshSchema: (sessionId: string) => Promise<void>;
   runRefactor: (req: RefactorRequest) => Promise<RefactorResponse>;
+  runCodeFix: (req: CodeFixRequest) => Promise<CodeFixResponse>;
   runCleanup: (req: CleanupRequest) => Promise<CleanupResponse>;
 };
 
@@ -164,13 +167,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(
-    async (connectionString: string) => {
-       if (!connectionString) {
+    async (sessionId: string) => {
+       if (!sessionId) {
          return;
        }
        dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
        try {
-         const data = await api.analyzeSchema(connectionString);
+         const data = await api.analyzeSchema({ sessionId });
          const tables = normalizeDbSchema(data);
          dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
        } catch (err: any) {
@@ -188,7 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
-      await refreshSchema(connectionString);
+      await refreshSchema(res.sessionId);
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
@@ -210,6 +213,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const runRefactorCb = useCallback(async (req: RefactorRequest) => {
     return api.runRefactor(req);
   }, []);
+
+  const runCodeFixCb = useCallback(async (req: CodeFixRequest) => {
+    return api.runCodeFix(req);
+  }, []);
   
   const runCleanupCb = useCallback(async (req: CleanupRequest) => {
     return api.runCleanup(req);
@@ -217,7 +224,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema, runRefactor: runRefactorCb, runCleanup: runCleanupCb }}>
+    <AppContext.Provider value={{ state, dispatch, connect, disconnect, refreshSchema, runRefactor: runRefactorCb, runCodeFix: runCodeFixCb, runCleanup: runCleanupCb }}>
       {children}
     </AppContext.Provider>
   );
