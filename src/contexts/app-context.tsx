@@ -167,8 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(
-    async () => {
-       const sessionId = state.sessionId;
+    async (sessionIdOverride?: string) => {
+       const sessionId = sessionIdOverride ?? state.sessionId;
        if (!sessionId) {
          return;
        }
@@ -191,26 +191,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.connectSession(connectionString);
       if (!res.sessionId) throw new Error('No se obtuvo SessionId de la API.');
-      dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
       
-      // Ahora se llama a refreshSchema sin argumentos, ya que toma el sessionId del estado.
-      // Pero el estado no se actualiza instantáneamente. Pasamos el ID directamente.
-       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
-       try {
-         const data = await api.analyzeSchema({ sessionId: res.sessionId });
-         const tables = normalizeDbSchema(data);
-         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
-       } catch (err: any) {
-         dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
-       } finally {
-         dispatch({ type: 'SET_SCHEMA_LOADING', payload: false });
-       }
+      // Dispatch síncrono para que el estado de sessionId se actualice antes de seguir
+      dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
+
+      // Llamar a refreshSchema con el nuevo ID directamente, sin depender del estado asíncrono
+      await refreshSchema(res.sessionId);
 
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
       throw e;
     }
-  }, []);
+  }, [refreshSchema]);
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;
