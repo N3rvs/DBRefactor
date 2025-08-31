@@ -8,29 +8,42 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BrainCircuit } from 'lucide-react';
+import { BrainCircuit, Eraser } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import { Skeleton } from '../ui/skeleton';
 import { SqlPreviewTab } from './sql-preview-tab';
 import { CodeFixPreviewTab } from './codefix-preview-tab';
 import { LogPreviewTab } from './log-preview-tab';
+import { Button } from '../ui/button';
 
 export function ResultPanel() {
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const { results } = state;
 
-  const hasResults = results.sql || results.codefix || results.dbLog;
+  const hasResults = results.sql || results.codefix || results.dbLog || results.error;
+
+  const handleClearResults = () => {
+    dispatch({ type: 'CLEAR_RESULTS' });
+  };
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <BrainCircuit className="w-6 h-6 text-primary" />
-          <CardTitle>Resultados</CardTitle>
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center gap-3">
+              <BrainCircuit className="w-6 h-6 text-primary" />
+              <CardTitle>Resultados</CardTitle>
+            </div>
+            <CardDescription>
+              Previsualice SQL, cambios de código y registros de ejecución aquí.
+            </CardDescription>
+          </div>
+          <Button onClick={handleClearResults} size="sm" variant="outline" disabled={!hasResults || results.isLoading}>
+            <Eraser className="mr-2 h-4 w-4" />
+            Limpiar
+          </Button>
         </div>
-        <CardDescription>
-          Previsualice SQL, cambios de código y registros de ejecución aquí.
-        </CardDescription>
       </CardHeader>
       <CardContent>
         {results.isLoading ? (

@@ -174,10 +174,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(async () => {
-    // Para refrescar manualmente, necesitamos el sessionId. 
-    // Si el backend no lo soporta, esta función podría necesitar la connection string de nuevo.
-    // Por ahora, asumimos que se puede refrescar con sessionId si ya se tiene una sesión.
     if (!state.sessionId) {
+      console.error("refreshSchema: No hay sessionId para refrescar.");
       return;
     }
     dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
@@ -207,6 +205,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (schemaErr: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: schemaErr?.message ?? 'Error al analizar esquema' });
+        // Aunque el esquema falle, la sesión puede seguir siendo válida. No lanzamos error aquí.
       }
 
     } catch (e: any) {
