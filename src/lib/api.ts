@@ -111,6 +111,7 @@ export const disconnectSession = (sessionId: string) =>
 
 /** 4) Ejecutar refactor con SessionId (o los otros métodos) */
 export const runRefactor = (req: RefactorRequest) => {
+  // El cuerpo completo de la petición debe ser enviado
   return fetchApi<RefactorResponse>('/refactor/run', {
     method: 'POST',
     body: JSON.stringify(req),
