@@ -114,16 +114,19 @@ export const disconnectSession = (sessionId: string) =>
 
 /** 4) Ejecutar refactor con SessionId (o los otros métodos) */
 export const runRefactor = (req: RefactorRequest) => {
+  // Construimos el body explícitamente para que coincida con la clase RunRequest del backend
   const body = {
     sessionId: req.sessionId,
-    connectionKey: req.connectionKey,
-    connectionString: req.connectionString,
     plan: req.plan,
     apply: req.apply,
     rootKey: req.rootKey,
     useSynonyms: req.useSynonyms,
     useViews: req.useViews,
     cqrs: req.cqrs,
+    // No enviamos connectionKey ni connectionString si son nulos/undefined, 
+    // ya que el backend los tomará como opcionales.
+    connectionKey: req.connectionKey, 
+    connectionString: req.connectionString,
   };
 
   return fetchApi<RefactorResponse>('/refactor/run', {
@@ -131,6 +134,7 @@ export const runRefactor = (req: RefactorRequest) => {
     body: JSON.stringify(body),
   });
 };
+
 
 /** 5) Ejecutar limpieza de compatibilidad */
 export const runCleanup = (req: CleanupRequest) => {
