@@ -87,13 +87,16 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
 
 /** 2) Analizar esquema usando GET con SessionID (según guía) */
 export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
+  // El backend siempre espera la connectionString para esta llamada en particular
   if (req.connectionString) {
     const url = new URL(`${API_BASE_URL}/analyze/schema`);
     url.searchParams.set('connectionString', req.connectionString);
+     // Estamos usando una URL completa, por lo que el path es solo la parte después del host
     return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
   }
   
   if (req.sessionId) {
+    // Esta ruta puede que no sea la esperada por el backend actual, pero la mantenemos por si acaso.
     return fetchApi<AnalyzeSchemaResponse>(
       `/analyze/schema?sessionId=${encodeURIComponent(req.sessionId)}`
     );
@@ -111,10 +114,21 @@ export const disconnectSession = (sessionId: string) =>
 
 /** 4) Ejecutar refactor con SessionId (o los otros métodos) */
 export const runRefactor = (req: RefactorRequest) => {
-  // El cuerpo completo de la petición debe ser enviado
+  const body = {
+    sessionId: req.sessionId,
+    connectionKey: req.connectionKey,
+    connectionString: req.connectionString,
+    plan: req.plan,
+    apply: req.apply,
+    rootKey: req.rootKey,
+    useSynonyms: req.useSynonyms,
+    useViews: req.useViews,
+    cqrs: req.cqrs,
+  };
+
   return fetchApi<RefactorResponse>('/refactor/run', {
     method: 'POST',
-    body: JSON.stringify(req),
+    body: JSON.stringify(body),
   });
 };
 
