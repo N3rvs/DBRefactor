@@ -2,16 +2,18 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Database, ServerCrash, Table2 } from 'lucide-react';
+import { Database, ServerCrash, Table2, RefreshCw } from 'lucide-react';
 import { useAppContext } from '@/contexts/app-context';
 import { SchemaViewer } from '@/components/schema/schema-viewer';
 import { AddOpDialog } from './add-op-dialog';
 import type { PlanOperation } from '@/lib/types';
 import { ScrollArea } from '../ui/scroll-area';
+import { Button } from '../ui/button';
 
 export function SchemaCard() {
   const { state, refreshSchema } = useAppContext();
   const { sessionId, schema } = state;
+  const { isLoading } = schema;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOp, setEditingOp] = useState<PlanOperation | null>(null);
@@ -27,6 +29,12 @@ export function SchemaCard() {
     setEditingOp(newOperation as PlanOperation);
     setIsDialogOpen(true);
   };
+  
+  const handleRefresh = () => {
+    if (sessionId) {
+      refreshSchema();
+    }
+  };
 
   return (
     <>
@@ -34,11 +42,19 @@ export function SchemaCard() {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <Database className="w-6 h-6 text-primary" />
-            <CardTitle>Esquema de Base de Datos</CardTitle>
+           <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-3">
+                <Database className="w-6 h-6 text-primary" />
+                <CardTitle>Esquema de Base de Datos</CardTitle>
+              </div>
+              <CardDescription>Vea las tablas, columnas y claves de su base de datos conectada.</CardDescription>
+            </div>
+            <Button onClick={handleRefresh} size="sm" variant="outline" disabled={isLoading || !sessionId}>
+              <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refrescar
+            </Button>
           </div>
-          <CardDescription>Vea las tablas, columnas y claves de su base de datos conectada.</CardDescription>
         </CardHeader>
 
         <CardContent>

@@ -51,6 +51,7 @@ import { AddOpDialog } from './add-op-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getAiRefactoringSuggestion } from '@/app/actions';
 import { AISuggestionDialog } from './ai-suggestion-dialog';
+import { ScrollArea } from '../ui/scroll-area';
 
 
 // --- Funciones de Sincronización ---
@@ -147,6 +148,13 @@ export function PlanBuilder() {
     dispatch({ type: 'REORDER_OPERATION', payload: { index, direction } });
   };
   
+  const handleClearPlan = () => {
+    if (window.confirm('¿Está seguro de que desea eliminar todas las operaciones del plan?')) {
+      dispatch({ type: 'SET_PLAN', payload: [] });
+      toast({ title: 'Plan Limpiado', description: 'Se han eliminado todas las operaciones.' });
+    }
+  };
+
   const handlePreview = async () => {
     if (!state.sessionId) {
       toast({ variant: 'destructive', title: 'No conectado', description: 'Por favor, conéctese a una base de datos primero.' });
@@ -425,84 +433,92 @@ export function PlanBuilder() {
                     Cree y ordene su lista de operaciones. Solo los cambios no aplicados se sincronizarán.
                 </CardDescription>
             </div>
-            <Button onClick={handleAddNew} size="sm" disabled={isLoading}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Operación
-            </Button>
+             <div className="flex gap-2">
+              <Button onClick={handleClearPlan} size="sm" variant="outline" disabled={isLoading || state.plan.length === 0}>
+                  <Eraser className="mr-2 h-4 w-4" />
+                  Limpiar Plan
+              </Button>
+              <Button onClick={handleAddNew} size="sm" disabled={isLoading}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Añadir Operación
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[150px]">Operación</TableHead>
-                  <TableHead>Desde</TableHead>
-                  <TableHead>Hasta / Detalles</TableHead>
-                  <TableHead>Nota</TableHead>
-                  <TableHead className="w-[50px] text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {state.plan.length > 0 ? (
-                  state.plan.map((op, index) => {
-                    const isApplied = appliedHashes.has(hashOp(op));
-                    return (
-                    <TableRow key={op.id} className={isApplied ? 'bg-muted/30 text-muted-foreground' : ''}>
-                      <TableCell>
-                        {getScopeBadge(op.Scope, isApplied)}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {renderFrom(op)}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {renderTo(op)}
-                      </TableCell>
-                      <TableCell className="text-sm">{op.Note || '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLoading}>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(op)} disabled={isLoading}>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleRemove(op.id)}
-                              className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                              disabled={isLoading}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Eliminar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                             <DropdownMenuItem onClick={() => handleMove(index, 'up')} disabled={isLoading || index === 0}>
-                              <ArrowUp className="mr-2 h-4 w-4" />
-                              Mover Arriba
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleMove(index, 'down')} disabled={isLoading || index === state.plan.length - 1}>
-                              <ArrowDown className="mr-2 h-4 w-4" />
-                              Mover Abajo
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+          <ScrollArea className="h-96 w-full pr-4">
+            <div className="border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Operación</TableHead>
+                    <TableHead>Desde</TableHead>
+                    <TableHead>Hasta / Detalles</TableHead>
+                    <TableHead>Nota</TableHead>
+                    <TableHead className="w-[50px] text-right"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {state.plan.length > 0 ? (
+                    state.plan.map((op, index) => {
+                      const isApplied = appliedHashes.has(hashOp(op));
+                      return (
+                      <TableRow key={op.id} className={isApplied ? 'bg-muted/30 text-muted-foreground' : ''}>
+                        <TableCell>
+                          {getScopeBadge(op.Scope, isApplied)}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {renderFrom(op)}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {renderTo(op)}
+                        </TableCell>
+                        <TableCell className="text-sm">{op.Note || '-'}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isLoading}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(op)} disabled={isLoading}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleRemove(op.id)}
+                                className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                                disabled={isLoading}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Eliminar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => handleMove(index, 'up')} disabled={isLoading || index === 0}>
+                                <ArrowUp className="mr-2 h-4 w-4" />
+                                Mover Arriba
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleMove(index, 'down')} disabled={isLoading || index === state.plan.length - 1}>
+                                <ArrowDown className="mr-2 h-4 w-4" />
+                                Mover Abajo
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    )})
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        Aún no se han añadido operaciones.
                       </TableCell>
                     </TableRow>
-                  )})
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center">
-                      Aún no se han añadido operaciones.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </ScrollArea>
            {pendingOperations.length === 0 && state.plan.length > 0 && (
              <div className="mt-4 p-3 rounded-md bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex items-center gap-3">
                 <ClipboardCheck className="h-5 w-5" />
