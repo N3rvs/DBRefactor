@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useReducer } from 'react';
+import React, { createContext, useCallback, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type {
   PlanOperation,
@@ -174,19 +174,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   
   const refreshSchema = useCallback(async () => {
-    if (!state.sessionId) {
-      console.error("refreshSchema: No hay sessionId para refrescar.");
+    // Esta función ahora depende de que _tempConnectionString exista.
+    // Si no existe (es decir, no estamos en el flujo de conexión inicial), no hará nada.
+    if (!state._tempConnectionString) {
+      console.warn("RefreshSchema: No hay connectionString temporal. Se omite la actualización. Para refrescar, desconecte y vuelva a conectar.");
+      // Opcionalmente, se podría mostrar un toast al usuario.
       return;
     }
     dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
     try {
-      const data = await api.analyzeSchema({ sessionId: state.sessionId });
+      const data = await api.analyzeSchema({ connectionString: state._tempConnectionString });
       const tables = normalizeDbSchema(data);
       dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
     } catch (err: any) {
       dispatch({ type: 'SET_SCHEMA_ERROR', payload: err?.message ?? 'Error al analizar esquema' });
     }
-  }, [state.sessionId]);
+  }, [state._tempConnectionString]);
   
   const connect = useCallback(async (connectionString: string) => {
     dispatch({ type: 'SESSION_START', payload: { connectionString } });
@@ -197,7 +200,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       dispatch({ type: 'SESSION_SUCCESS', payload: { sessionId: res.sessionId, expiresAtUtc: res.expiresAtUtc } });
 
-      // 2. Cargar esquema usando la connectionString, ya que el backend lo requiere.
+      // 2. Cargar esquema usando la connectionString, que ahora está en el estado temporal
       dispatch({ type: 'SET_SCHEMA_LOADING', payload: true });
       try {
         const data = await api.analyzeSchema({ connectionString });
@@ -205,12 +208,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_SCHEMA_SUCCESS', payload: tables });
       } catch (schemaErr: any) {
         dispatch({ type: 'SET_SCHEMA_ERROR', payload: schemaErr?.message ?? 'Error al analizar esquema' });
-        // Aunque el esquema falle, la sesión puede seguir siendo válida. No lanzamos error aquí.
       }
 
     } catch (e: any) {
       dispatch({ type: 'SESSION_ERROR', payload: e?.message ?? 'No se pudo conectar.' });
-      throw e; // Relanzar para que el componente de UI pueda manejarlo
+      throw e;
     } finally {
       // 3. Limpiar la connection string temporal del estado
       dispatch({ type: 'CLEAR_TEMP_CONNECTION_STRING' });
@@ -219,7 +221,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     if (!state.sessionId) return;
-    dispatch({ type: 'SESSION_START', payload: { connectionString: '' } }); // No necesitamos conn string aquí
+    dispatch({ type: 'SESSION_START', payload: { connectionString: '' } });
     try {
       await api.disconnectSession(state.sessionId);
     } catch (e: any) {

@@ -53,7 +53,7 @@ async function fetchApi<T>(
           errorJson?.error ||
           errorJson?.message ||
           errorJson?.title ||
-          errorJson?.detail || // Añadir "detail" que a veces usan las APIs .NET
+          errorJson?.detail || 
           `Error HTTP: ${response.status}`;
         throw new Error(errorMessage);
       } catch (e) {
@@ -85,24 +85,14 @@ export const connectSession = (connectionString: string, ttlSeconds = 1800) =>
     body: JSON.stringify({ connectionString, ttlSeconds }),
   });
 
-/** 2) Analizar esquema usando GET con SessionID (según guía) */
+/** 2) Analizar esquema. Basado en los requisitos del backend, siempre usaremos connectionString. */
 export const analyzeSchema = (req: AnalyzeSchemaRequest) => {
-  // El backend siempre espera la connectionString para esta llamada en particular
-  if (req.connectionString) {
-    const url = new URL(`${API_BASE_URL}/analyze/schema`);
-    url.searchParams.set('connectionString', req.connectionString);
-     // Estamos usando una URL completa, por lo que el path es solo la parte después del host
-    return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
+  if (!req.connectionString) {
+      throw new Error('Se requiere connectionString para analizar el esquema.');
   }
-  
-  if (req.sessionId) {
-    // Esta ruta puede que no sea la esperada por el backend actual, pero la mantenemos por si acaso.
-    return fetchApi<AnalyzeSchemaResponse>(
-      `/analyze/schema?sessionId=${encodeURIComponent(req.sessionId)}`
-    );
-  }
-
-  throw new Error('Se requiere sessionId o connectionString para analizar el esquema.');
+  const url = new URL(`${API_BASE_URL}/analyze/schema`);
+  url.searchParams.set('connectionString', req.connectionString);
+  return fetchApi<AnalyzeSchemaResponse>(`${url.pathname}${url.search}`);
 };
 
 
@@ -114,7 +104,6 @@ export const disconnectSession = (sessionId: string) =>
 
 /** 4) Ejecutar refactor con SessionId (o los otros métodos) */
 export const runRefactor = (req: RefactorRequest) => {
-  // Construimos el body explícitamente para que coincida con la clase RunRequest del backend
   const body = {
     sessionId: req.sessionId,
     plan: req.plan,
@@ -123,9 +112,7 @@ export const runRefactor = (req: RefactorRequest) => {
     useSynonyms: req.useSynonyms,
     useViews: req.useViews,
     cqrs: req.cqrs,
-    // No enviamos connectionKey ni connectionString si son nulos/undefined, 
-    // ya que el backend los tomará como opcionales.
-    connectionKey: req.connectionKey, 
+    connectionKey: req.connectionKey,
     connectionString: req.connectionString,
   };
 

@@ -31,6 +31,9 @@ export function SchemaCard() {
   };
   
   const handleRefresh = () => {
+    // La lógica de refreshSchema ahora se maneja principalmente dentro del contexto
+    // para asegurar que solo se ejecute cuando es posible (durante la conexión).
+    // Esta llamada es para un reintento manual si el usuario lo desea.
     if (sessionId) {
       refreshSchema();
     }
